@@ -25,6 +25,8 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const voiceInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
@@ -64,6 +66,31 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
     }
     if (voiceInputRef.current) {
       voiceInputRef.current.value = "";
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, type: "image" | "file") => {
+    const file = event.target.files?.[0];
+    if (file && onFileUpload) {
+      onFileUpload(file, type);
+    }
+    if (type === "image" && imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+    if (type === "file" && fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const triggerAttachFile = () => {
+    if (!isSuspended && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const triggerImageFile = () => {
+    if (!isSuspended && imageInputRef.current) {
+      imageInputRef.current.click();
     }
   };
 
@@ -228,6 +255,24 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
       {/* ── INPUT ── */}
       <div className="flex-shrink-0 px-3 py-2 bg-[#1a1f2e] border-t border-[#2a2e3e]">
         <input
+          ref={fileInputRef}
+          type="file"
+          onChange={(e) => handleFileSelect(e, "file")}
+          style={{ pointerEvents: "auto", opacity: 0, position: "absolute", width: 0, height: 0 }}
+          accept="*/*"
+          multiple={false}
+          capture={false}
+        />
+        <input
+          ref={imageInputRef}
+          type="file"
+          onChange={(e) => handleFileSelect(e, "image")}
+          style={{ pointerEvents: "auto", opacity: 0, position: "absolute", width: 0, height: 0 }}
+          accept="image/jpeg,image/png,image/webp,image/svg+xml"
+          multiple={false}
+          capture={false}
+        />
+        <input
           ref={voiceInputRef}
           type="file"
           onChange={handleVoiceFileSelect}
@@ -275,10 +320,25 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
               disabled={isSuspended}
               className="flex-1 bg-transparent border-none outline-none text-[#ccd4f5] text-[14px] py-2.5 font-[inherit] placeholder-[#555e7a] disabled:cursor-not-allowed"
             />
-            {/* Attach */}
-            <button 
+            {/* Image */}
+            <button
+              onClick={triggerImageFile}
               className="text-[#555e7a] hover:text-[#8891aa] transition-colors ml-1 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSuspended}
+              title="Upload image"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+            </button>
+            {/* Attach */}
+            <button 
+              onClick={triggerAttachFile}
+              className="text-[#555e7a] hover:text-[#8891aa] transition-colors ml-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSuspended}
+              title="Attach file"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48" />

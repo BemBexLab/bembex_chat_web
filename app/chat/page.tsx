@@ -317,6 +317,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     }
   };
 
+  const handleMobileLogout = () => {
+    if (!confirm("Are you sure you want to logout?")) return;
+    if (effectiveUser?.isAdmin) {
+      localStorage.removeItem("admin_auth");
+      document.cookie = "admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+      router.replace("/admin-login");
+      return;
+    }
+    handleLogoutUser();
+  };
+
   const handleMobileSelectConv = (id: string) => {
     setActiveId(id);
     setMobileChatOpen(true);
@@ -899,7 +910,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
         ) : (
           <>
             {/* Top bar */}
-            <MobileTopBar title={mobileTitles[mobileTab]} />
+            <MobileTopBar
+              title={mobileTitles[mobileTab]}
+              token={effectiveToken}
+              onUserSelect={handleSelectUserFromSearch}
+              onLogout={handleMobileLogout}
+              showSearch={mobileTab === "chats"}
+            />
 
             {/* Tab content */}
             <div className="flex-1 flex flex-col overflow-hidden relative">
