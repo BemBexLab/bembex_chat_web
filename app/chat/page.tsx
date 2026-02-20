@@ -13,10 +13,7 @@ import MainChat from "@/components/MainChat";
 
 // ── Mobile-only components ───────────────────────────────────────────────────
 import MobileTopBar from "@/components/Mobiletopbar";
-import MobileBottomNav from "@/components/Mobilebottomnav";
 import MobileChatList from "@/components/Mobilechatlist";
-import MobileStatusList from "@/components/Mobilestatuslist";
-import MobileCallsList from "@/components/Mobilecallslist";
 import MobileChatView from "@/components/Mobilechatview";
 
 import { Conversation, Message, UserProfile } from "@/types";
@@ -45,7 +42,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Mobile state
-  const [mobileTab, setMobileTab] = useState<"chats" | "status" | "calls">("chats");
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
 
   // Suspension state
@@ -407,12 +403,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     // IMPORTANT: Only depend on admin selection props, NOT on conversations or onlineUsers
     // This prevents re-running when data fetches update those arrays
   }, [adminSelectedUserId, adminSelectedUserName, adminSelectedConversationId]);
-
-  const mobileTitles: Record<string, string> = {
-    chats: "Chats",
-    status: "Status",
-    calls: "Calls",
-  };
 
   // Track active conversation ID with ref to avoid listener recreation
   const activeIdRef = React.useRef<string | null>(null);
@@ -911,50 +901,29 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
           <>
             {/* Top bar */}
             <MobileTopBar
-              title={mobileTitles[mobileTab]}
+              title="Chats"
               token={effectiveToken}
               onUserSelect={handleSelectUserFromSearch}
               onLogout={handleMobileLogout}
-              showSearch={mobileTab === "chats"}
+              showSearch={true}
             />
 
             {/* Tab content */}
             <div className="flex-1 flex flex-col overflow-hidden relative">
-              {mobileTab === "chats" && (
-                <MobileChatList
-                  conversations={conversations}
-                  activeId={activeId || ""}
-                  onSelect={handleMobileSelectConv}
-                  isAdmin={!!adminUser}
-                />
-              )}
-              {mobileTab === "status" && <MobileStatusList />}
-              {mobileTab === "calls" && <MobileCallsList />}
+              <MobileChatList
+                conversations={conversations}
+                activeId={activeId || ""}
+                onSelect={handleMobileSelectConv}
+                isAdmin={!!adminUser}
+              />
 
               {/* FAB */}
               <button className="absolute bottom-4 right-4 w-14 h-14 bg-[#4e6ef2] rounded-full flex items-center justify-center shadow-xl shadow-[#4e6ef2]/40 active:scale-95 transition-transform z-10">
-                {mobileTab === "chats" && (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                )}
-                {mobileTab === "status" && (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="8" x2="12" y2="16" />
-                    <line x1="8" y1="12" x2="16" y2="12" />
-                  </svg>
-                )}
-                {mobileTab === "calls" && (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.07 14 19.79 19.79 0 0 1 1 5.18 2 2 0 0 1 2.97 3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 10.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-                  </svg>
-                )}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
               </button>
             </div>
-
-            {/* Bottom tab navigation */}
-            <MobileBottomNav activeTab={mobileTab} onTabChange={setMobileTab} />
           </>
         )}
       </div>

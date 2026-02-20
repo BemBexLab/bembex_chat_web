@@ -201,21 +201,6 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
           </span>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-0.5">
-          <button className="w-9 h-9 flex items-center justify-center text-[#8891aa] rounded-full hover:bg-[#2a2e3e] transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.07 14 19.79 19.79 0 0 1 1 5.18 2 2 0 0 1 2.97 3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 10.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-            </svg>
-          </button>
-          <button className="w-9 h-9 flex items-center justify-center text-[#8891aa] rounded-full hover:bg-[#2a2e3e] transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="5" r="1.5" />
-              <circle cx="12" cy="12" r="1.5" />
-              <circle cx="12" cy="19" r="1.5" />
-            </svg>
-          </button>
-        </div>
       </div>
 
       {/* ── MESSAGES ── */}
@@ -295,19 +280,6 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
           <div className="text-[11px] text-[#ef4444] mb-2 px-1">Recording voice note...</div>
         )}
         <div className="flex items-end gap-2">
-          {/* Emoji */}
-          <button 
-            className="w-9 h-9 flex items-center justify-center text-[#555e7a] hover:text-[#8891aa] transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isSuspended}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-              <line x1="9" y1="9" x2="9.01" y2="9" />
-              <line x1="15" y1="9" x2="15.01" y2="9" />
-            </svg>
-          </button>
-
           {/* Text input */}
           <div className={`flex-1 flex items-center bg-[#252b40] border border-[#2a2e3e] rounded-2xl px-3.5 transition-colors ${
             isSuspended ? "opacity-60" : "focus-within:border-[#4e6ef2]"
