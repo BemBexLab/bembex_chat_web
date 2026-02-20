@@ -228,9 +228,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
             )}
             <audio
               controls
-              preload="none"
+              preload="metadata"
               src={resolvedFileUrl || message.fileUrl}
               className="max-w-[380px] w-full"
+              onLoadedMetadata={() => setAudioReady(true)}
+              onCanPlay={() => setAudioReady(true)}
               onCanPlayThrough={() => setAudioReady(true)}
               onLoadedData={() => setAudioReady(true)}
               onError={() => setAudioReady(true)}
