@@ -26,6 +26,9 @@ const AdminDashboard: React.FC = () => {
   const [isDesktop, setIsDesktop] = useState(false);
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const playedNotificationMessageIdsRef = useRef<Set<string>>(new Set());
+  const audioUnlockedRef = useRef(false);
+  const pendingNotificationRef = useRef(false);
+  const lastNotificationAtRef = useRef(0);
   const router = typeof window !== "undefined" ? require("next/navigation").useRouter() : null;
 
   useEffect(() => {
@@ -83,8 +86,41 @@ const AdminDashboard: React.FC = () => {
     if (!notificationAudioRef.current) {
       const audio = new Audio("/f1_radio.mp3");
       audio.volume = 1;
+      audio.preload = "auto";
       notificationAudioRef.current = audio;
     }
+
+    const unlockAudio = () => {
+      const audio = notificationAudioRef.current;
+      if (!audio || audioUnlockedRef.current) return;
+      audio
+        .play()
+        .then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audioUnlockedRef.current = true;
+          if (pendingNotificationRef.current) {
+            pendingNotificationRef.current = false;
+            setTimeout(() => {
+              const retryAudio = notificationAudioRef.current;
+              if (!retryAudio) return;
+              retryAudio.currentTime = 0;
+              retryAudio.play().catch(() => {});
+            }, 0);
+          }
+        })
+        .catch(() => {});
+    };
+
+    window.addEventListener("pointerdown", unlockAudio, { passive: true });
+    window.addEventListener("keydown", unlockAudio);
+    window.addEventListener("touchstart", unlockAudio, { passive: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+      window.removeEventListener("touchstart", unlockAudio);
+    };
   }, []);
 
   useEffect(() => {
@@ -96,21 +132,25 @@ const AdminDashboard: React.FC = () => {
     const handleNewMessage = (data: any) => {
       if (String(data?.senderId) === String(adminUser.id)) return;
 
-      const incomingMessageId = String(
-        data?.id ||
-          `${data?.conversationId || "unknown"}-${data?.senderId || "unknown"}-${data?.timestamp || Date.now()}`
-      );
+      const incomingMessageId = data?.id ? String(data.id) : null;
 
-      if (playedNotificationMessageIdsRef.current.has(incomingMessageId)) return;
-      playedNotificationMessageIdsRef.current.add(incomingMessageId);
+      if (incomingMessageId && playedNotificationMessageIdsRef.current.has(incomingMessageId)) return;
+      if (incomingMessageId) {
+        playedNotificationMessageIdsRef.current.add(incomingMessageId);
+      }
       if (playedNotificationMessageIdsRef.current.size > 500) {
         const firstKey = playedNotificationMessageIdsRef.current.values().next().value;
         if (firstKey) playedNotificationMessageIdsRef.current.delete(firstKey);
       }
 
       if (notificationAudioRef.current) {
+        const now = Date.now();
+        if (now - lastNotificationAtRef.current < 100) return;
+        lastNotificationAtRef.current = now;
         notificationAudioRef.current.currentTime = 0;
-        notificationAudioRef.current.play().catch(() => {});
+        notificationAudioRef.current.play().catch(() => {
+          pendingNotificationRef.current = true;
+        });
       }
     };
 
