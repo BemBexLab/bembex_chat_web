@@ -37,28 +37,39 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
           requestUrl = message.fileUrl.substring(markerIndex);
         }
 
-        let token: string | null = null;
+        let adminToken: string | null = null;
+        let userToken: string | null = null;
         if (typeof window !== "undefined") {
           const adminRaw = localStorage.getItem("admin_auth");
           const userRaw = localStorage.getItem("auth");
           if (adminRaw) {
-            token = JSON.parse(adminRaw)?.token || null;
+            adminToken = JSON.parse(adminRaw)?.token || null;
           }
-          if (!token && userRaw) {
-            token = JSON.parse(userRaw)?.token || null;
+          if (userRaw) {
+            userToken = JSON.parse(userRaw)?.token || null;
           }
         }
 
-        const headers: Record<string, string> = {};
-        if (token) {
-          headers.Authorization = `Bearer ${token}`;
-        }
-
-        const response = await fetch(requestUrl, {
+        // 1) Cookie-first request (most reliable after re-login)
+        let response = await fetch(requestUrl, {
           method: "GET",
-          headers,
           credentials: "include",
         });
+        // 2) Fallback with bearer tokens if cookie is unavailable
+        if (!response.ok && adminToken) {
+          response = await fetch(requestUrl, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${adminToken}` },
+            credentials: "include",
+          });
+        }
+        if (!response.ok && userToken) {
+          response = await fetch(requestUrl, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${userToken}` },
+            credentials: "include",
+          });
+        }
         if (!response.ok) {
           setResolvedFileUrl(message.fileUrl);
           setResolvedMimeType((message.fileType || "").toLowerCase());
