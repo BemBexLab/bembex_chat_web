@@ -102,6 +102,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
   const [adminUser, setAdminUser] = useState<any>(null);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
 
+  const resolveAttachmentType = (messageType?: string, mimeType?: string): Message["fileType"] => {
+    const normalizedMime = (mimeType || "").toLowerCase();
+    if (messageType === "voice" || normalizedMime.startsWith("audio/")) return "voice";
+    if (messageType === "file") {
+      if (normalizedMime.startsWith("image/")) return "image";
+      return "file";
+    }
+    return undefined;
+  };
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const adminAuth = localStorage.getItem("admin_auth");
@@ -212,7 +222,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     }
   };
 
-  const handleFileUpload = async (file: File, type: 'image' | 'file') => {
+  const handleFileUpload = async (file: File, type: 'image' | 'file' | 'voice') => {
     if (!activeConv || !effectiveToken || !effectiveUser || isSuspended) return;
     try {
       const resp = await uploadFile(activeConv.otherUserId || "", file, effectiveToken);
@@ -460,7 +470,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
               isSelf: data.senderId === effectiveUser.id,
               fileUrl: data.fileUrl,
               fileName: data.fileName,
-              fileType: data.fileType,
+              fileType: resolveAttachmentType(data.messageType, data.fileType),
+              messageType: data.messageType,
             },
           ];
         });
@@ -548,9 +559,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
             getMemberConversation(effectiveUser.id, selectedUserId, effectiveToken)
               .then((data) => {
                 const msgs: Message[] = (data.messages || []).map((m: any) => {
-                  let displayFileType: 'image' | 'file' | undefined;
+                  let displayFileType: 'image' | 'file' | 'voice' | undefined;
                   if (m.messageType === 'file' && m.fileType) {
                     displayFileType = m.fileType.startsWith('image/') ? 'image' : 'file';
+                  }
+                  if (m.messageType === 'voice' || (m.fileType && String(m.fileType).startsWith('audio/'))) {
+                    displayFileType = 'voice';
                   }
                   return {
                     id: m.id || m._id,
@@ -561,6 +575,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                     fileUrl: m.fileUrl,
                     fileName: m.fileName,
                     fileType: displayFileType,
+                    messageType: m.messageType,
                   };
                 });
                 setMessages(msgs);
@@ -585,9 +600,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
           getMemberConversation(parts[0], parts[1], effectiveToken)
             .then((data) => {
               const msgs: Message[] = (data.messages || []).map((m: any) => {
-                let displayFileType: 'image' | 'file' | undefined;
+                let displayFileType: 'image' | 'file' | 'voice' | undefined;
                 if (m.messageType === 'file' && m.fileType) {
                   displayFileType = m.fileType.startsWith('image/') ? 'image' : 'file';
+                }
+                if (m.messageType === 'voice' || (m.fileType && String(m.fileType).startsWith('audio/'))) {
+                  displayFileType = 'voice';
                 }
                 return {
                   id: m.id || m._id,
@@ -598,6 +616,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                   fileUrl: m.fileUrl,
                   fileName: m.fileName,
                   fileType: displayFileType,
+                  messageType: m.messageType,
                 };
               });
               setMessages(msgs);
@@ -616,9 +635,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
       fetchConversation(activeId, effectiveToken)
         .then((data) => {
           const msgs: Message[] = data.messages.map((m: any) => {
-          let displayFileType: 'image' | 'file' | undefined;
+          let displayFileType: 'image' | 'file' | 'voice' | undefined;
           if (m.messageType === 'file' && m.fileType) {
             displayFileType = m.fileType.startsWith('image/') ? 'image' : 'file';
+          }
+          if (m.messageType === 'voice' || (m.fileType && String(m.fileType).startsWith('audio/'))) {
+            displayFileType = 'voice';
           }
           return {
             id: m._id,
@@ -629,6 +651,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
             fileUrl: m.fileUrl,
             fileName: m.fileName,
             fileType: displayFileType,
+            messageType: m.messageType,
           };
         });
         setMessages(msgs);
@@ -784,6 +807,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
             messages={messages}
             onBack={() => setMobileChatOpen(false)}
             onSend={handleSend}
+            onFileUpload={handleFileUpload}
             isSuspended={isSuspended}
           />
         ) : (

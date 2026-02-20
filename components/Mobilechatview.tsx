@@ -9,6 +9,7 @@ interface MobileChatViewProps {
   messages: Message[];
   onBack: () => void;
   onSend: (text: string) => void;
+  onFileUpload?: (file: File, type: 'image' | 'file' | 'voice') => void;
   isSuspended?: boolean;
 }
 
@@ -17,10 +18,14 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
   messages,
   onBack,
   onSend,
+  onFileUpload,
   isSuspended = false,
 }) => {
   const [input, setInput] = useState("");
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -37,6 +42,49 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const toggleVoiceRecording = async () => {
+    if (isSuspended || !onFileUpload) return;
+
+    if (isRecordingVoice) {
+      mediaRecorderRef.current?.stop();
+      setIsRecordingVoice(false);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      voiceChunksRef.current = [];
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          voiceChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(voiceChunksRef.current, {
+          type: recorder.mimeType || "audio/webm",
+        });
+        const extension = (recorder.mimeType || "audio/webm").includes("ogg") ? "ogg" : "webm";
+        const voiceFile = new File([audioBlob], `voice-note-${Date.now()}.${extension}`, {
+          type: recorder.mimeType || "audio/webm",
+        });
+        onFileUpload(voiceFile, "voice");
+        stream.getTracks().forEach((track) => track.stop());
+        mediaRecorderRef.current = null;
+        voiceChunksRef.current = [];
+      };
+
+      recorder.start();
+      setIsRecordingVoice(true);
+    } catch (error) {
+      console.error("Voice recording failed:", error);
+      alert("Microphone access is required to send voice notes.");
     }
   };
 
@@ -136,6 +184,9 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
             Your account is suspended
           </div>
         )}
+        {isRecordingVoice && (
+          <div className="text-[11px] text-[#ef4444] mb-2 px-1">Recording voice note...</div>
+        )}
         <div className="flex items-end gap-2">
           {/* Emoji */}
           <button 
@@ -185,8 +236,10 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
             </button>
           ) : (
             <button 
+              onClick={toggleVoiceRecording}
               className="w-10 h-10 flex items-center justify-center rounded-full bg-[#4e6ef2] text-white flex-shrink-0 shadow-lg shadow-[#4e6ef2]/30 disabled:opacity-50"
               disabled={isSuspended}
+              title={isRecordingVoice ? "Stop recording" : "Record voice note"}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />

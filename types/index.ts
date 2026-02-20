@@ -7,7 +7,8 @@ export interface Message {
   isNew?: boolean;
   fileUrl?: string;
   fileName?: string;
-  fileType?: 'image' | 'file';
+  fileType?: 'image' | 'file' | 'voice';
+  messageType?: 'text' | 'file' | 'voice';
 }
 
 export interface UserProfile {

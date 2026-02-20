@@ -95,6 +95,8 @@ async function handler(req: AuthenticatedRequest) {
 
     const senderName = userType === 'admin' ? (sender as any).email : (sender as any).username;
     const receiverName = receiverIsAdminFlag ? (receiver as any).email : (receiver as any).username;
+    const isVoiceNote = (file.type || '').startsWith('audio/');
+    const uploadedFileUrl = `/uploads/${fileName}`;
 
     const newMessage = new Chat({
       conversationId,
@@ -104,11 +106,12 @@ async function handler(req: AuthenticatedRequest) {
       receiverId: receiverObjectId,
       receiverModel: receiverIsAdminFlag ? 'Admin' : 'User',
       receiverName,
-      message: message || file.name,
-      messageType: 'file',
+      message: message || (isVoiceNote ? 'Voice note' : file.name),
+      messageType: isVoiceNote ? 'voice' : 'file',
       fileType: file.type,
       fileName: file.name,
-      fileUrl: `/uploads/${fileName}`,
+      fileUrl: uploadedFileUrl,
+      voiceUrl: isVoiceNote ? uploadedFileUrl : null,
       isRead: false,
       createdAt: new Date(),
     });
@@ -124,7 +127,8 @@ async function handler(req: AuthenticatedRequest) {
           senderName: newMessage.senderName,
           message: newMessage.message,
           messageType: newMessage.messageType,
-          fileUrl: `/uploads/${fileName}`,
+          fileUrl: uploadedFileUrl,
+          voiceUrl: isVoiceNote ? uploadedFileUrl : null,
           fileName: file.name,
           fileSize: file.size,
           fileType: file.type,

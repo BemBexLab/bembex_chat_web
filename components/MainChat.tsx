@@ -8,15 +8,18 @@ interface MainChatProps {
   messages: Message[];
   recipientName: string;
   onSend: (text: string) => void;
-  onFileUpload?: (file: File, type: 'image' | 'file') => void;
+  onFileUpload?: (file: File, type: 'image' | 'file' | 'voice') => void;
   isSuspended?: boolean;
 }
 
 const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, onFileUpload, isSuspended = false }) => {
   const [input, setInput] = useState("");
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -46,6 +49,49 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
       imageInputRef.current.value = '';
     } else if (type === 'file' && fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const toggleVoiceRecording = async () => {
+    if (isSuspended || !onFileUpload) return;
+
+    if (isRecordingVoice) {
+      mediaRecorderRef.current?.stop();
+      setIsRecordingVoice(false);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      voiceChunksRef.current = [];
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          voiceChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(voiceChunksRef.current, {
+          type: recorder.mimeType || "audio/webm",
+        });
+        const extension = (recorder.mimeType || "audio/webm").includes("ogg") ? "ogg" : "webm";
+        const voiceFile = new File([audioBlob], `voice-note-${Date.now()}.${extension}`, {
+          type: recorder.mimeType || "audio/webm",
+        });
+        onFileUpload(voiceFile, "voice");
+        stream.getTracks().forEach((track) => track.stop());
+        mediaRecorderRef.current = null;
+        voiceChunksRef.current = [];
+      };
+
+      recorder.start();
+      setIsRecordingVoice(true);
+    } catch (error) {
+      console.error("Voice recording failed:", error);
+      alert("Microphone access is required to send voice notes.");
     }
   };
 
@@ -150,14 +196,16 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
               onClick: triggerAttachFile,
             },
             {
-              label: "Mention",
+              label: isRecordingVoice ? "Stop Voice" : "Voice",
               icon: (
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="4" />
-                  <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94" />
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
                 </svg>
               ),
-              onClick: () => {},
+              onClick: toggleVoiceRecording,
             },
             {
               label: "Image",
@@ -186,6 +234,9 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
             </button>
           ))}
         </div>
+        {isRecordingVoice && (
+          <div className="text-[11px] text-[#ef4444] mb-1.5 px-1">Recording voice note...</div>
+        )}
 
         {/* Hidden file inputs */}
         <input

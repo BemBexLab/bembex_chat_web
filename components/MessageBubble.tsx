@@ -21,7 +21,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
     (normalizedType === "image" ||
       normalizedType.startsWith("image/") ||
       /\.(png|jpe?g|gif|webp|bmp|svg)$/.test(lowerFileName));
-  const isFile = hasAttachment && !isImage;
+  const isVoice =
+    hasAttachment &&
+    (normalizedType === "voice" ||
+      normalizedType.startsWith("audio/") ||
+      /\.(mp3|wav|ogg|m4a|aac|webm)$/.test(lowerFileName));
+  const isFile = hasAttachment && !isImage && !isVoice;
 
   return (
     <div
@@ -78,6 +83,28 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                 {message.content}
               </div>
             )}
+          </div>
+        ) : isVoice ? (
+          <div
+            className={`px-3 py-2 rounded-xl flex flex-col gap-2 ${
+              message.isSelf
+                ? "bg-[#4e6ef2] text-white rounded-br-sm"
+                : "bg-[#252b40] text-[#ccd4f5] rounded-bl-sm"
+            }`}
+          >
+            <audio controls preload="none" src={message.fileUrl} className="max-w-[260px] w-full" />
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] truncate">{message.fileName || "Voice note"}</span>
+              <a
+                href={message.fileUrl}
+                download={message.fileName || true}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`text-[11px] ${message.isSelf ? "text-white/90" : "text-[#6b95ff]"} hover:underline`}
+              >
+                Download
+              </a>
+            </div>
           </div>
         ) : isFile ? (
           <a
