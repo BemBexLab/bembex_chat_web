@@ -342,6 +342,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
   React.useEffect(() => {
     activeIdRef.current = activeId;
   }, [activeId]);
+  const playedNotificationMessageIdsRef = React.useRef<Set<string>>(new Set());
 
   // Helper to check online status robustly (handles different id shapes)
   const isIdOnline = (id: any) => {
@@ -398,6 +399,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
 
     // Listen for new message events (set up once)
     const handleNewMessage = (data: any) => {
+      const incomingMessageId = String(
+        data?.id ||
+        `${data?.conversationId || "unknown"}-${data?.senderId || "unknown"}-${data?.timestamp || Date.now()}`
+      );
       const currentActiveId = activeIdRef.current;
       const isTempActive = !!currentActiveId && currentActiveId.startsWith("temp_");
       const tempTargetUserId = isTempActive ? currentActiveId.slice("temp_".length) : null;
@@ -414,6 +419,18 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
         fromUser: data.senderName,
         message: data.message?.substring(0, 50)
       });
+
+      // Play notification for every incoming message from other users/admins, regardless of active chat.
+      if (String(data.senderId) !== String(effectiveUser.id)) {
+        if (!playedNotificationMessageIdsRef.current.has(incomingMessageId)) {
+          playedNotificationMessageIdsRef.current.add(incomingMessageId);
+          if (playedNotificationMessageIdsRef.current.size > 500) {
+            const firstKey = playedNotificationMessageIdsRef.current.values().next().value;
+            if (firstKey) playedNotificationMessageIdsRef.current.delete(firstKey);
+          }
+          playNotificationSound();
+        }
+      }
 
       // If admin/user is on a temp conversation and a real message arrives for that participant,
       // switch to the real conversation id immediately.
@@ -447,11 +464,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
             },
           ];
         });
-        // Only play sound for incoming messages from others
-        if (data.senderId !== effectiveUser.id) {
-          console.log("[ChatPage] 🔔 Playing notification sound for incoming message");
-          playNotificationSound();
-        }
       }
       // Update conversation list (move to top, update last message, unread, etc.)
       setConversations((prev) => {
