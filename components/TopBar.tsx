@@ -143,32 +143,32 @@ const TopBar: React.FC<TopBarProps> = ({ token, onUserSelect }) => {
 
       {/* Right: Actions + Avatar */}
       <div className="flex items-center gap-1 w-40 justify-end">
-        <button className="w-6 h-6 bg-[#4e6ef2] rounded-md flex items-center justify-center text-white hover:bg-[#3d5de0] transition-colors mr-1">
+        {/* <button className="w-6 h-6 bg-[#4e6ef2] rounded-md flex items-center justify-center text-white hover:bg-[#3d5de0] transition-colors mr-1">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-        </button>
+        </button> */}
 
         {/* Notification */}
-        <button className="w-[30px] h-[30px] flex items-center justify-center text-[#8891aa] rounded-md hover:bg-[#1d2133] hover:text-[#ccd4f5] transition-colors">
+        {/* <button className="w-[30px] h-[30px] flex items-center justify-center text-[#8891aa] rounded-md hover:bg-[#1d2133] hover:text-[#ccd4f5] transition-colors">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
-        </button>
+        </button> */}
 
         {/* Settings */}
-        <button className="w-[30px] h-[30px] flex items-center justify-center text-[#8891aa] rounded-md hover:bg-[#1d2133] hover:text-[#ccd4f5] transition-colors">
+        {/* <button className="w-[30px] h-[30px] flex items-center justify-center text-[#8891aa] rounded-md hover:bg-[#1d2133] hover:text-[#ccd4f5] transition-colors">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="3" />
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
           </svg>
-        </button>
+        </button> */}
 
         {/* Avatar */}
         <div className="w-7 h-7 rounded-full bg-[#4e6ef2] text-white text-[10px] font-bold flex items-center justify-center cursor-pointer ml-1">
-          AR
+          {/* AR */}
         </div>
       </div>
     </div>
