@@ -300,8 +300,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
   };
 
   const handleDesktopSelectConv = (id: string) => {
+    setConversations((prev) =>
+      prev.map((conv) => (conv.id === id ? { ...conv, unread: 0 } : conv))
+    );
     setActiveId(id);
     setSidebarOpen(false);
+    if (effectiveToken && !String(id).startsWith("temp_")) {
+      markAsRead(id, effectiveToken).catch(() => {});
+    }
   };
 
   // Logout handler for regular users (used by Sidebar)
@@ -325,8 +331,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
   };
 
   const handleMobileSelectConv = (id: string) => {
+    setConversations((prev) =>
+      prev.map((conv) => (conv.id === id ? { ...conv, unread: 0 } : conv))
+    );
     setActiveId(id);
     setMobileChatOpen(true);
+    if (effectiveToken && !String(id).startsWith("temp_")) {
+      markAsRead(id, effectiveToken).catch(() => {});
+    }
   };
 
   const handleSelectUserFromSearch = (userId: string, userName: string) => {
@@ -585,11 +597,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
 
           if (conv.id === data.conversationId) {
             found = true;
+            const isActiveConversation = conv.id === activeIdRef.current;
             return {
               ...conv,
               lastMessage: data.message,
               lastMessageTime: new Date(data.timestamp).toISOString(),
-              unread: conv.id === activeIdRef.current ? 0 : (conv.unread || 0) + 1,
+              unread: isActiveConversation
+                ? 0
+                : isIncomingForCurrentUser
+                  ? (conv.unread || 0) + 1
+                  : (conv.unread || 0),
             };
           }
           return conv;
