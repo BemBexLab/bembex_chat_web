@@ -12,6 +12,9 @@ function identifySocket() {
 export function connectSocket(token: string, userId: string, userType: string) {
 	console.log("[Socket] connectSocket called - current socket state:", socket?.connected ? "CONNECTED" : socket ? "DISCONNECTED" : "NULL");
 	currentIdentity = { userId, userType };
+	const socketUrl =
+		(typeof process !== "undefined" && process.env.NEXT_PUBLIC_SOCKET_URL) ||
+		(typeof window !== "undefined" ? window.location.origin : "");
 
 	if (socket && socket.connected) {
 		console.log("[Socket] Socket already connected, re-identifying current identity");
@@ -21,19 +24,22 @@ export function connectSocket(token: string, userId: string, userType: string) {
 
 	if (socket && !socket.connected) {
 		console.log("[Socket] Socket was disconnected, attempting to reconnect...");
+		socket.auth = { token };
 		socket.connect();
 		return socket;
 	}
 
 	if (!socket) {
-		console.log("[Socket] Creating NEW socket connection for user:", userId, "type:", userType);
-		socket = io(typeof window !== "undefined" ? window.location.origin : "", {
-			transports: ["websocket"],
+		console.log("[Socket] Creating NEW socket connection for user:", userId, "type:", userType, "url:", socketUrl);
+		socket = io(socketUrl, {
+			// Allow polling fallback for hosting environments where raw websocket upgrade can fail.
+			transports: ["polling", "websocket"],
 			auth: { token },
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
-			reconnectionAttempts: 5,
+			reconnectionAttempts: 20,
+			timeout: 10000,
 			forceNew: false,
 		});
 
@@ -53,7 +59,7 @@ export function connectSocket(token: string, userId: string, userType: string) {
 		});
 
 		socket.on("connect_error", (error) => {
-			console.error("[Socket] Connection error:", error);
+			console.error("[Socket] Connection error:", error?.message || error);
 		});
 
 		socket.on("user_suspended", async (data: any) => {
