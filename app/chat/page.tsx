@@ -420,6 +420,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     activeIdRef.current = activeId;
   }, [activeId]);
   const playedNotificationMessageIdsRef = React.useRef<Set<string>>(new Set());
+  const socketListenerStartedAtRef = React.useRef<number>(0);
+
+  const normalizeId = (value: any): string => {
+    if (!value) return "";
+    if (typeof value === "string" || typeof value === "number") return String(value);
+    if (typeof value === "object") {
+      if (value._id) return String(value._id);
+      if (value.id) return String(value.id);
+    }
+    return "";
+  };
 
   // Helper to check online status robustly (handles different id shapes)
   const isIdOnline = (id: any) => {
@@ -440,6 +451,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
   // Real-time: Setup socket.io connection ONCE when user logs in
   useEffect(() => {
     if (!effectiveToken || !effectiveUser) return;
+    socketListenerStartedAtRef.current = Date.now();
 
     // Connect socket and set up listeners
     const socket = connectSocket(
@@ -495,7 +507,26 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
       });
 
       // Play notification for every incoming message from other users/admins, regardless of active chat.
-      if (String(data.senderId) !== String(effectiveUser.id)) {
+      const senderId = normalizeId(data?.senderId);
+      const receiverId = normalizeId(data?.receiverId);
+      const selfId = normalizeId(effectiveUser?.id);
+      const hasContent =
+        typeof data?.message === "string" ||
+        !!data?.fileUrl ||
+        !!data?.fileName ||
+        data?.messageType === "file" ||
+        data?.messageType === "voice";
+      const eventTimestamp = data?.timestamp ? new Date(data.timestamp).getTime() : Date.now();
+      const isRecentLiveEvent = Number.isFinite(eventTimestamp)
+        ? eventTimestamp >= socketListenerStartedAtRef.current - 1500
+        : true;
+      const isIncomingForCurrentUser =
+        !!senderId &&
+        !!selfId &&
+        senderId !== selfId &&
+        (!!effectiveUser?.isAdmin || receiverId === selfId);
+
+      if (hasContent && isRecentLiveEvent && isIncomingForCurrentUser) {
         if (!incomingMessageId || !playedNotificationMessageIdsRef.current.has(incomingMessageId)) {
           if (incomingMessageId) {
             playedNotificationMessageIdsRef.current.add(incomingMessageId);
