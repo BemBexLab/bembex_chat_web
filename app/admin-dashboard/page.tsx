@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import AdminSidebar from "@/components/Adminsidebar";
 import AdminTopBar from "@/components/Admintopbar";
 import DashboardOverview from "@/components/Dasboardoverview";
 import UsersManagement from "@/components/Usersmanagement";
 import ConversationMonitor from "@/components/Conversationmonitor";
+import { connectSocket, getSocket } from "@/lib/socket";
 
 import dynamic from "next/dynamic";
 
@@ -23,6 +24,8 @@ const AdminDashboard: React.FC = () => {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const playedNotificationMessageIdsRef = useRef<Set<string>>(new Set());
   const router = typeof window !== "undefined" ? require("next/navigation").useRouter() : null;
 
   useEffect(() => {
@@ -74,6 +77,50 @@ const AdminDashboard: React.FC = () => {
     mediaQuery.addEventListener("change", updateLayout);
     return () => mediaQuery.removeEventListener("change", updateLayout);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!notificationAudioRef.current) {
+      const audio = new Audio("/f1_radio.mp3");
+      audio.volume = 1;
+      notificationAudioRef.current = audio;
+    }
+  }, []);
+
+  useEffect(() => {
+    // Chat page already handles message sounds; only keep this listener for non-chat views.
+    if (!adminToken || !adminUser || activeView === "chat") return;
+
+    const socket = connectSocket(adminToken, adminUser.id, "admin");
+
+    const handleNewMessage = (data: any) => {
+      if (String(data?.senderId) === String(adminUser.id)) return;
+
+      const incomingMessageId = String(
+        data?.id ||
+          `${data?.conversationId || "unknown"}-${data?.senderId || "unknown"}-${data?.timestamp || Date.now()}`
+      );
+
+      if (playedNotificationMessageIdsRef.current.has(incomingMessageId)) return;
+      playedNotificationMessageIdsRef.current.add(incomingMessageId);
+      if (playedNotificationMessageIdsRef.current.size > 500) {
+        const firstKey = playedNotificationMessageIdsRef.current.values().next().value;
+        if (firstKey) playedNotificationMessageIdsRef.current.delete(firstKey);
+      }
+
+      if (notificationAudioRef.current) {
+        notificationAudioRef.current.currentTime = 0;
+        notificationAudioRef.current.play().catch(() => {});
+      }
+    };
+
+    socket.off("new_message", handleNewMessage);
+    socket.on("new_message", handleNewMessage);
+
+    return () => {
+      socket.off("new_message", handleNewMessage);
+    };
+  }, [adminToken, adminUser, activeView]);
 
   const handleLogout = () => {
     if (confirm("Are you sure you want to logout?")) {

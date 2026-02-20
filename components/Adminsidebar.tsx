@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 type AdminView = "dashboard" | "users" | "monitor" | "chat";
 
@@ -10,6 +10,41 @@ interface AdminSidebarProps {
 }
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeView, onViewChange }) => {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchUnread = async () => {
+      try {
+        const raw = typeof window !== "undefined" ? localStorage.getItem("admin_auth") : null;
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        const token = parsed?.token;
+        if (!token) return;
+
+        const res = await fetch("/api/chat/unread-count", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (mounted) {
+          setUnreadCount(Number(data?.unreadCount || 0));
+        }
+      } catch {
+        // ignore polling errors in sidebar
+      }
+    };
+
+    fetchUnread();
+    const intervalId = setInterval(fetchUnread, 5000);
+
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+    };
+  }, []);
+
   const menuItems: { id: AdminView; label: string; icon: React.ReactNode }[] = [
     {
       id: "dashboard",
@@ -89,6 +124,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeView, onViewChange })
                 {item.icon}
               </div>
               <span className="text-[14px] font-medium">{item.label}</span>
+              {item.id === "chat" && unreadCount > 0 && (
+                <span
+                  className="ml-auto w-2.5 h-2.5 rounded-full bg-[#4e6ef2] shadow-[0_0_8px_rgba(78,110,242,0.8)]"
+                  title={`${unreadCount} unread message${unreadCount === 1 ? "" : "s"}`}
+                />
+              )}
             </button>
           ))}
         </div>

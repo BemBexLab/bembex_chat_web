@@ -42,36 +42,36 @@ const Header: React.FC<HeaderProps> = ({ conversation, onMenuClick }) => {
       {/* Right: action icons */}
       <div className="flex items-center gap-0.5">
         {/* Search */}
-        <button className="w-8 h-8 flex items-center justify-center text-[#8891aa] rounded-md hover:bg-[#2a2e3e] hover:text-[#ccd4f5] transition-colors" title="Search">
+        {/* <button className="w-8 h-8 flex items-center justify-center text-[#8891aa] rounded-md hover:bg-[#2a2e3e] hover:text-[#ccd4f5] transition-colors" title="Search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
-        </button>
+        </button> */}
 
         {/* Call */}
-        <button className="w-8 h-8 flex items-center justify-center text-[#8891aa] rounded-md hover:bg-[#2a2e3e] hover:text-[#ccd4f5] transition-colors" title="Call">
+        {/* <button className="w-8 h-8 flex items-center justify-center text-[#8891aa] rounded-md hover:bg-[#2a2e3e] hover:text-[#ccd4f5] transition-colors" title="Call">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.07 14 19.79 19.79 0 0 1 1 5.18 2 2 0 0 1 2.97 3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 10.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
           </svg>
-        </button>
+        </button> */}
 
         {/* Video */}
-        <button className="w-8 h-8 flex items-center justify-center text-[#8891aa] rounded-md hover:bg-[#2a2e3e] hover:text-[#ccd4f5] transition-colors" title="Video Call">
+        {/* <button className="w-8 h-8 flex items-center justify-center text-[#8891aa] rounded-md hover:bg-[#2a2e3e] hover:text-[#ccd4f5] transition-colors" title="Video Call">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polygon points="23 7 16 12 23 17 23 7" />
             <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
           </svg>
-        </button>
+        </button> */}
 
         {/* More */}
-        <button className="w-8 h-8 flex items-center justify-center text-[#8891aa] rounded-md hover:bg-[#2a2e3e] hover:text-[#ccd4f5] transition-colors" title="More">
+        {/* <button className="w-8 h-8 flex items-center justify-center text-[#8891aa] rounded-md hover:bg-[#2a2e3e] hover:text-[#ccd4f5] transition-colors" title="More">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="5" r="1.2" fill="currentColor" />
             <circle cx="12" cy="12" r="1.2" fill="currentColor" />
             <circle cx="12" cy="19" r="1.2" fill="currentColor" />
           </svg>
-        </button>
+        </button> */}
       </div>
     </div>
   );

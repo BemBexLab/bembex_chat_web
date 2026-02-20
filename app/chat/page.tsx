@@ -20,7 +20,7 @@ import MobileCallsList from "@/components/Mobilecallslist";
 import MobileChatView from "@/components/Mobilechatview";
 
 import { Conversation, Message, UserProfile } from "@/types";
-import { fetchConversations, fetchConversation, sendMessage, uploadFile, getMemberConversation } from "@/lib/api";
+import { fetchConversations, fetchConversation, sendMessage, uploadFile, getMemberConversation, markAsRead } from "@/lib/api";
 import { connectSocket, disconnectSocket, getSocket } from "@/lib/socket";
 
 
@@ -604,6 +604,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
               setConversations((prev) =>
                 prev.map((conv) => (conv.id === activeId ? { ...conv, unread: 0 } : conv))
               );
+              markAsRead(activeId, effectiveToken).catch(() => {});
             })
             .catch((e) => {
               console.error(e);
@@ -634,6 +635,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
         setConversations((prev) =>
           prev.map((conv) => (conv.id === activeId ? { ...conv, unread: 0 } : conv))
         );
+        markAsRead(activeId, effectiveToken).catch(() => {});
       })
       .catch((e) => {
         console.error(e);
