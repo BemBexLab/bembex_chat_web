@@ -59,6 +59,11 @@ const chatSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    fileData: {
+      type: Buffer,
+      default: null,
+      select: false,
+    },
     voiceUrl: {
       type: String,
       default: null,

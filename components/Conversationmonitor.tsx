@@ -275,6 +275,14 @@ const ConversationMonitor: React.FC = () => {
                       ? window.location.origin + msg.fileUrl
                       : msg.fileUrl
                     : null;
+                  const normalizedType = (msg.fileType || "").toLowerCase();
+                  const lowerFileName = (msg.fileName || "").toLowerCase();
+                  const isImageAttachment =
+                    !!fileUrl &&
+                    (msg.messageType === "file" &&
+                      (normalizedType.startsWith("image/") ||
+                        normalizedType === "image" ||
+                        /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif|avif)$/.test(lowerFileName)));
 
                   return (
                     <div key={msg.id} className="flex flex-col gap-1">
@@ -294,7 +302,7 @@ const ConversationMonitor: React.FC = () => {
                       <div className="bg-[#252b40] border border-[#2a2e3e] rounded-lg px-4 py-2.5 max-w-[80%]">
                         {fileUrl ? (
                           <div className="flex flex-col gap-2">
-                            {msg.fileType && msg.fileType.startsWith("image") ? (
+                            {isImageAttachment ? (
                               <a href={fileUrl} target="_blank" rel="noopener noreferrer">
                                 <img src={fileUrl} alt={msg.fileName || "image"} className="max-w-full rounded-md shadow-sm" />
                               </a>

@@ -4,9 +4,6 @@ import { connectDB } from '../../utils/database';
 import Chat from '../../models/Chat';
 import User from '../../models/User';
 import Admin from '../../models/Admin';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
 import mongoose from 'mongoose';
 
 async function handler(req: AuthenticatedRequest) {
@@ -74,19 +71,6 @@ async function handler(req: AuthenticatedRequest) {
       return NextResponse.json({ message: 'Receiver not found' }, { status: 404 });
     }
 
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
-    }
-
-    const timestamp = Date.now();
-    const randomStr = Math.random().toString(36).substring(2, 8);
-    const ext = file.name.split('.').pop();
-    const fileName = `${timestamp}-${randomStr}.${ext}`;
-    const filePath = join(uploadsDir, fileName);
-
-    await writeFile(filePath, buffer);
-
     const conversationId = [
       userId!.toString(),
       receiverId.toString(),
@@ -97,9 +81,11 @@ async function handler(req: AuthenticatedRequest) {
     const senderName = userType === 'admin' ? (sender as any).email : (sender as any).username;
     const receiverName = receiverIsAdminFlag ? (receiver as any).email : (receiver as any).username;
     const isVoiceNote = requestedMessageType === 'voice' || (file.type || '').startsWith('audio/');
-    const uploadedFileUrl = `/uploads/${fileName}`;
+    const messageId = new mongoose.Types.ObjectId();
+    const uploadedFileUrl = `/api/chat/file/${messageId.toString()}`;
 
     const newMessage = new Chat({
+      _id: messageId,
       conversationId,
       senderId: userObjectId,
       senderModel: userType === 'admin' ? 'Admin' : 'User',
@@ -111,7 +97,9 @@ async function handler(req: AuthenticatedRequest) {
       messageType: isVoiceNote ? 'voice' : 'file',
       fileType: file.type,
       fileName: file.name,
+      fileSize: file.size,
       fileUrl: uploadedFileUrl,
+      fileData: buffer,
       voiceUrl: isVoiceNote ? uploadedFileUrl : null,
       isRead: false,
       createdAt: new Date(),

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Message } from "../types";
 
 interface MessageBubbleProps {
@@ -8,12 +8,80 @@ interface MessageBubbleProps {
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
+  const [resolvedFileUrl, setResolvedFileUrl] = useState<string | null>(message.fileUrl || null);
+
+  useEffect(() => {
+    let blobUrlToRevoke: string | null = null;
+    let cancelled = false;
+
+    const resolveProtectedFileUrl = async () => {
+      if (!message.fileUrl) {
+        setResolvedFileUrl(null);
+        return;
+      }
+
+      const isMongoFileApi = message.fileUrl.includes("/api/chat/file/");
+      if (!isMongoFileApi) {
+        setResolvedFileUrl(message.fileUrl);
+        return;
+      }
+
+      try {
+        let token: string | null = null;
+        if (typeof window !== "undefined") {
+          const adminRaw = localStorage.getItem("admin_auth");
+          const userRaw = localStorage.getItem("auth");
+          if (adminRaw) {
+            token = JSON.parse(adminRaw)?.token || null;
+          }
+          if (!token && userRaw) {
+            token = JSON.parse(userRaw)?.token || null;
+          }
+        }
+
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+
+        const response = await fetch(message.fileUrl, {
+          method: "GET",
+          headers,
+          credentials: "include",
+        });
+        if (!response.ok) {
+          setResolvedFileUrl(message.fileUrl);
+          return;
+        }
+
+        const blob = await response.blob();
+        blobUrlToRevoke = URL.createObjectURL(blob);
+        if (!cancelled) {
+          setResolvedFileUrl(blobUrlToRevoke);
+        }
+      } catch {
+        if (!cancelled) {
+          setResolvedFileUrl(message.fileUrl);
+        }
+      }
+    };
+
+    resolveProtectedFileUrl();
+
+    return () => {
+      cancelled = true;
+      if (blobUrlToRevoke) {
+        URL.revokeObjectURL(blobUrlToRevoke);
+      }
+    };
+  }, [message.fileUrl]);
+
   const isLink =
     message.content &&
     (message.content.startsWith("http://") ||
     message.content.startsWith("https://"));
 
-  const hasAttachment = !!message.fileUrl;
+  const hasAttachment = !!resolvedFileUrl;
   const normalizedType = (message.fileType || "").toLowerCase();
   const lowerFileName = (message.fileName || "").toLowerCase();
   const isImage =
@@ -57,9 +125,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         {/* Bubble */}
         {isImage ? (
           <div className="rounded-xl overflow-hidden max-w-xs border border-[#2a2e3e] bg-[#1b2032]">
-            <a href={message.fileUrl} target="_blank" rel="noopener noreferrer">
+            <a href={resolvedFileUrl || message.fileUrl} target="_blank" rel="noopener noreferrer">
               <img
-                src={message.fileUrl}
+                src={resolvedFileUrl || message.fileUrl}
                 alt={message.fileName || "Image"}
                 className="w-full h-auto max-h-80 object-cover"
               />
@@ -69,7 +137,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                 {message.fileName || "Image"}
               </span>
               <a
-                href={message.fileUrl}
+                href={resolvedFileUrl || message.fileUrl}
                 download={message.fileName || true}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -92,11 +160,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                 : "bg-[#252b40] text-[#ccd4f5] rounded-bl-sm"
             }`}
           >
-            <audio controls preload="none" src={message.fileUrl} className="max-w-[260px] w-full" />
+            <audio controls preload="none" src={resolvedFileUrl || message.fileUrl} className="max-w-[260px] w-full" />
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] truncate">{message.fileName || "Voice note"}</span>
               <a
-                href={message.fileUrl}
+                href={resolvedFileUrl || message.fileUrl}
                 download={message.fileName || true}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -108,7 +176,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
           </div>
         ) : isFile ? (
           <a
-            href={message.fileUrl}
+            href={resolvedFileUrl || message.fileUrl}
             download={message.fileName}
             target="_blank"
             rel="noopener noreferrer"
