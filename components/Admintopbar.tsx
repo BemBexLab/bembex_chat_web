@@ -243,21 +243,21 @@ const AdminTopBar: React.FC<AdminTopBarProps> = ({ onLogout, token, onUserSelect
       {/* Right actions */}
       <div className="flex items-center gap-2">
         {/* Notifications */}
-        <button className="relative w-10 h-10 flex items-center justify-center text-[#8891aa] rounded-lg hover:bg-[#252b40] hover:text-[#ccd4f5] transition-colors">
+        {/* <button className="relative w-10 h-10 flex items-center justify-center text-[#8891aa] rounded-lg hover:bg-[#252b40] hover:text-[#ccd4f5] transition-colors">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#ef4444] rounded-full border border-[#1d2133]" />
-        </button>
+        </button> */}
 
         {/* Settings */}
-        <button className="w-10 h-10 flex items-center justify-center text-[#8891aa] rounded-lg hover:bg-[#252b40] hover:text-[#ccd4f5] transition-colors">
+        {/* <button className="w-10 h-10 flex items-center justify-center text-[#8891aa] rounded-lg hover:bg-[#252b40] hover:text-[#ccd4f5] transition-colors">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="3" />
             <path d="M12 1v6m0 6v6m8.66-13.32l-4.24 4.24m0 6.36l4.24 4.24M23 12h-6m-6 0H1m12.68-8.66l-4.24 4.24m0 6.36l-4.24 4.24" />
           </svg>
-        </button>
+        </button> */}
 
         {/* Logout */}
         <button

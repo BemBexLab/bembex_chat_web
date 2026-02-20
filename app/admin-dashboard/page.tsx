@@ -137,7 +137,10 @@ const AdminDashboard: React.FC = () => {
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6">
             {activeView === "dashboard" && (
-              <DashboardOverview onViewChatsClick={() => handleViewChange("chat")} />
+              <DashboardOverview
+                onViewChatsClick={() => handleViewChange("chat")}
+                onManageUsersClick={() => handleViewChange("users")}
+              />
             )}
             {activeView === "users" && <UsersManagement />}
             {activeView === "monitor" && <ConversationMonitor />}
@@ -225,7 +228,10 @@ const AdminDashboard: React.FC = () => {
         <div className="flex-1 overflow-y-auto">
           {activeView === "dashboard" && (
             <div className="p-4">
-              <DashboardOverview onViewChatsClick={() => handleViewChange("chat")} />
+              <DashboardOverview
+                onViewChatsClick={() => handleViewChange("chat")}
+                onManageUsersClick={() => handleViewChange("users")}
+              />
             </div>
           )}
           {activeView === "users" && (

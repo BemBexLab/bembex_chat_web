@@ -4,13 +4,7 @@ import React, { useState, useEffect } from "react";
 import StatsCards from "@/components/Statscards";
 import { DashboardStats } from "@/types/admin";
 import { useAuth } from "@/context/AuthContext";
-
-const MOCK_STATS: DashboardStats = {
-  totalUsers: 127,
-  activeUsers: 98,
-  suspendedUsers: 29,
-  totalConversations: 456,
-};
+import { getDashboardStats } from "@/lib/api";
 
 interface Activity {
   id: string;
@@ -24,9 +18,16 @@ interface Activity {
 
 interface DashboardOverviewProps {
   onViewChatsClick?: () => void;
+  onManageUsersClick?: () => void;
 }
 
-const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onViewChatsClick }) => {
+const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onViewChatsClick, onManageUsersClick }) => {
+  const [stats, setStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    activeUsers: 0,
+    suspendedUsers: 0,
+    totalConversations: 0,
+  });
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +55,14 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onViewChatsClick 
 
     try {
       setLoading(true);
+      const statsResponse = await getDashboardStats(effectiveToken);
+      setStats({
+        totalUsers: statsResponse?.stats?.totalUsers || 0,
+        activeUsers: statsResponse?.stats?.activeUsers || 0,
+        suspendedUsers: statsResponse?.stats?.suspendedUsers || 0,
+        totalConversations: statsResponse?.stats?.uniqueConversations || 0,
+      });
+
       const res = await fetch("/api/admin/activity", {
         headers: { Authorization: `Bearer ${effectiveToken}` },
       });
@@ -69,7 +78,13 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onViewChatsClick 
     } catch (err: any) {
       console.error("Error fetching activities:", err);
       setError(err.message);
-      // Fallback to mock data if API fails
+      // Fallback data if API fails
+      setStats({
+        totalUsers: 0,
+        activeUsers: 0,
+        suspendedUsers: 0,
+        totalConversations: 0,
+      });
       setActivities([
         { id: "1", type: "user_login", user: "Abdul Rehman", userEmail: "abdul@example.com", action: "User logged in", time: "2 hours ago", timestamp: new Date(Date.now() - 2 * 60 * 60000).toISOString() },
         { id: "2", type: "user_logout", user: "Abdul Rehman", userEmail: "abdul@example.com", action: "User logged out", time: "1 hour ago", timestamp: new Date(Date.now() - 60 * 60000).toISOString() },
@@ -89,7 +104,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onViewChatsClick 
       </div>
 
       {/* Stats Cards */}
-      <StatsCards stats={MOCK_STATS} />
+      <StatsCards stats={stats} />
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex justify-end items-end">
@@ -174,7 +189,10 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onViewChatsClick 
             <h2 className="text-[16px] font-bold text-[#e4e9f7]">Quick Actions</h2>
           </div>
           <div className="p-4 space-y-2">
-            <button className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-[#4e6ef2]/10 to-transparent border border-[#4e6ef2]/20 rounded-lg hover:border-[#4e6ef2]/40 transition-colors text-left">
+            <button
+              onClick={onManageUsersClick}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-[#4e6ef2]/10 to-transparent border border-[#4e6ef2]/20 rounded-lg hover:border-[#4e6ef2]/40 transition-colors text-left"
+            >
               <div className="w-8 h-8 rounded-lg bg-[#4e6ef2]/20 flex items-center justify-center flex-shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4e6ef2" strokeWidth="2">
                   <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />

@@ -18,9 +18,9 @@ async function handler(req: AuthenticatedRequest) {
     }
 
     const [totalUsers, suspendedUsers, activeUsers, totalMessages, uniqueConversations] = await Promise.all([
-      User.countDocuments({ type: 'user' }),
-      User.countDocuments({ type: 'user', isSuspended: true }),
-      User.countDocuments({ type: 'user', isActive: true }),
+      User.countDocuments({}),
+      User.countDocuments({ suspended: true }),
+      User.countDocuments({ isActive: true, suspended: false }),
       Chat.countDocuments(),
       Chat.find({}, 'conversationId')
         .distinct('conversationId')
