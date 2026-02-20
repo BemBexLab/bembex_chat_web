@@ -24,6 +24,7 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
   const [input, setInput] = useState("");
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const voiceInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
 
@@ -45,6 +46,22 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
     }
   };
 
+  const handleVoiceFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && onFileUpload) {
+      onFileUpload(file, "voice");
+    }
+    if (voiceInputRef.current) {
+      voiceInputRef.current.value = "";
+    }
+  };
+
+  const pickVoiceFile = () => {
+    if (!isSuspended && voiceInputRef.current) {
+      voiceInputRef.current.click();
+    }
+  };
+
   const toggleVoiceRecording = async () => {
     if (isSuspended || !onFileUpload) return;
 
@@ -55,8 +72,23 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
     }
 
     try {
+      if (typeof MediaRecorder === "undefined") {
+        pickVoiceFile();
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const preferredMimeTypes = [
+        "audio/mp4",
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+      ];
+      const canCheckMime = typeof (MediaRecorder as any).isTypeSupported === "function";
+      const selectedMimeType = canCheckMime
+        ? preferredMimeTypes.find((mime) => MediaRecorder.isTypeSupported(mime))
+        : undefined;
+      const recorder = selectedMimeType ? new MediaRecorder(stream, { mimeType: selectedMimeType }) : new MediaRecorder(stream);
       voiceChunksRef.current = [];
       mediaRecorderRef.current = recorder;
 
@@ -67,10 +99,20 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
       };
 
       recorder.onstop = () => {
+        if (!voiceChunksRef.current.length) {
+          stream.getTracks().forEach((track) => track.stop());
+          mediaRecorderRef.current = null;
+          alert("No audio captured. Please try recording again.");
+          return;
+        }
         const audioBlob = new Blob(voiceChunksRef.current, {
           type: recorder.mimeType || "audio/webm",
         });
-        const extension = (recorder.mimeType || "audio/webm").includes("ogg") ? "ogg" : "webm";
+        const extension = (recorder.mimeType || "audio/webm").includes("ogg")
+          ? "ogg"
+          : (recorder.mimeType || "").includes("mp4")
+            ? "mp4"
+            : "webm";
         const voiceFile = new File([audioBlob], `voice-note-${Date.now()}.${extension}`, {
           type: recorder.mimeType || "audio/webm",
         });
@@ -80,11 +122,11 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
         voiceChunksRef.current = [];
       };
 
-      recorder.start();
+      recorder.start(250);
       setIsRecordingVoice(true);
     } catch (error) {
       console.error("Voice recording failed:", error);
-      alert("Microphone access is required to send voice notes.");
+      pickVoiceFile();
     }
   };
 
@@ -174,6 +216,15 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
 
       {/* ── INPUT ── */}
       <div className="flex-shrink-0 px-3 py-2 bg-[#1a1f2e] border-t border-[#2a2e3e]">
+        <input
+          ref={voiceInputRef}
+          type="file"
+          onChange={handleVoiceFileSelect}
+          style={{ pointerEvents: 'auto', opacity: 0, position: 'absolute', width: 0, height: 0 }}
+          accept="audio/*"
+          multiple={false}
+          capture={false}
+        />
         {isSuspended && (
           <div className="bg-[#ef4444]/10 border border-[#ef4444]/30 rounded-lg px-3 py-2 mb-2 text-[12px] text-[#ef4444] flex items-center gap-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

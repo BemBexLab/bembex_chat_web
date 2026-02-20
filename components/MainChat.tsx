@@ -18,6 +18,7 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const voiceInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
 
@@ -52,6 +53,22 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
     }
   };
 
+  const handleVoiceFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && onFileUpload) {
+      onFileUpload(file, "voice");
+    }
+    if (voiceInputRef.current) {
+      voiceInputRef.current.value = "";
+    }
+  };
+
+  const pickVoiceFile = () => {
+    if (!isSuspended && voiceInputRef.current) {
+      voiceInputRef.current.click();
+    }
+  };
+
   const toggleVoiceRecording = async () => {
     if (isSuspended || !onFileUpload) return;
 
@@ -62,8 +79,23 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
     }
 
     try {
+      if (typeof MediaRecorder === "undefined") {
+        pickVoiceFile();
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const preferredMimeTypes = [
+        "audio/mp4",
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+      ];
+      const canCheckMime = typeof (MediaRecorder as any).isTypeSupported === "function";
+      const selectedMimeType = canCheckMime
+        ? preferredMimeTypes.find((mime) => MediaRecorder.isTypeSupported(mime))
+        : undefined;
+      const recorder = selectedMimeType ? new MediaRecorder(stream, { mimeType: selectedMimeType }) : new MediaRecorder(stream);
       voiceChunksRef.current = [];
       mediaRecorderRef.current = recorder;
 
@@ -74,10 +106,20 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
       };
 
       recorder.onstop = () => {
+        if (!voiceChunksRef.current.length) {
+          stream.getTracks().forEach((track) => track.stop());
+          mediaRecorderRef.current = null;
+          alert("No audio captured. Please try recording again.");
+          return;
+        }
         const audioBlob = new Blob(voiceChunksRef.current, {
           type: recorder.mimeType || "audio/webm",
         });
-        const extension = (recorder.mimeType || "audio/webm").includes("ogg") ? "ogg" : "webm";
+        const extension = (recorder.mimeType || "audio/webm").includes("ogg")
+          ? "ogg"
+          : (recorder.mimeType || "").includes("mp4")
+            ? "mp4"
+            : "webm";
         const voiceFile = new File([audioBlob], `voice-note-${Date.now()}.${extension}`, {
           type: recorder.mimeType || "audio/webm",
         });
@@ -87,11 +129,11 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
         voiceChunksRef.current = [];
       };
 
-      recorder.start();
+      recorder.start(250);
       setIsRecordingVoice(true);
     } catch (error) {
       console.error("Voice recording failed:", error);
-      alert("Microphone access is required to send voice notes.");
+      pickVoiceFile();
     }
   };
 
@@ -254,6 +296,15 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
           onChange={(e) => handleFileSelect(e, 'image')}
           style={{ pointerEvents: 'auto', opacity: 0, position: 'absolute', width: 0, height: 0 }}
           accept="image/jpeg,image/png,image/webp,image/svg+xml"
+          multiple={false}
+          capture={false}
+        />
+        <input
+          ref={voiceInputRef}
+          type="file"
+          onChange={handleVoiceFileSelect}
+          style={{ pointerEvents: 'auto', opacity: 0, position: 'absolute', width: 0, height: 0 }}
+          accept="audio/*"
           multiple={false}
           capture={false}
         />

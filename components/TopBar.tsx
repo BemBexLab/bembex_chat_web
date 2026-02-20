@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { searchUsers } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface User {
   _id: string;
@@ -16,6 +17,7 @@ interface TopBarProps {
 }
 
 const TopBar: React.FC<TopBarProps> = ({ token, onUserSelect }) => {
+  const { user } = useAuth();
   const [searchInput, setSearchInput] = useState("");
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -65,6 +67,11 @@ const TopBar: React.FC<TopBarProps> = ({ token, onUserSelect }) => {
       onUserSelect(userId, userName);
     }
   };
+
+  const avatarText = (user?.username || user?.email || "US")
+    .trim()
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="h-11 bg-[#141728] border-b border-[#1f2336] flex items-center px-3 gap-3 flex-shrink-0 sticky top-0 z-20">
@@ -168,7 +175,7 @@ const TopBar: React.FC<TopBarProps> = ({ token, onUserSelect }) => {
 
         {/* Avatar */}
         <div className="w-7 h-7 rounded-full bg-[#4e6ef2] text-white text-[10px] font-bold flex items-center justify-center cursor-pointer ml-1">
-          {/* AR */}
+          {avatarText}
         </div>
       </div>
     </div>

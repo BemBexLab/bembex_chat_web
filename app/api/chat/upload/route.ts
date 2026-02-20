@@ -27,6 +27,7 @@ async function handler(req: AuthenticatedRequest) {
     const file = formData.get('file') as File;
     const receiverId = formData.get('receiverId') as string;
     const message = formData.get('message') as string;
+    const requestedMessageType = (formData.get('messageType') as string) || 'file';
 
     if (!file) {
       return NextResponse.json(
@@ -95,7 +96,7 @@ async function handler(req: AuthenticatedRequest) {
 
     const senderName = userType === 'admin' ? (sender as any).email : (sender as any).username;
     const receiverName = receiverIsAdminFlag ? (receiver as any).email : (receiver as any).username;
-    const isVoiceNote = (file.type || '').startsWith('audio/');
+    const isVoiceNote = requestedMessageType === 'voice' || (file.type || '').startsWith('audio/');
     const uploadedFileUrl = `/uploads/${fileName}`;
 
     const newMessage = new Chat({

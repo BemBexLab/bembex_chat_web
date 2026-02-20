@@ -225,8 +225,35 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
   const handleFileUpload = async (file: File, type: 'image' | 'file' | 'voice') => {
     if (!activeConv || !effectiveToken || !effectiveUser || isSuspended) return;
     try {
-      const resp = await uploadFile(activeConv.otherUserId || "", file, effectiveToken);
+      const resp = await uploadFile(
+        activeConv.otherUserId || "",
+        file,
+        effectiveToken,
+        type === "voice" ? "voice" : "file"
+      );
       const uploaded = resp.file;
+      const localMsgType = resolveAttachmentType(uploaded?.messageType, uploaded?.fileType || file.type);
+
+      // Add locally immediately (socket may be delayed/unavailable in some deployments).
+      setMessages((prev) => {
+        const localId = uploaded?.id || uploaded?._id;
+        if (localId && prev.some((m) => m.id === localId)) return prev;
+        return [
+          ...prev,
+          {
+            id: localId || `local-${Date.now()}`,
+            sender: uploaded?.senderName || effectiveUser.username,
+            content: uploaded?.message || file.name,
+            time: new Date(uploaded?.timestamp || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            isSelf: true,
+            fileUrl: uploaded?.fileUrl || null,
+            fileName: uploaded?.fileName || file.name,
+            fileType: localMsgType,
+            messageType: uploaded?.messageType || (type === "voice" ? "voice" : "file"),
+          },
+        ];
+      });
+
       const socket = getSocket();
       socket?.emit("new_message", {
         conversationId: uploaded?.conversationId,

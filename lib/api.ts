@@ -93,10 +93,11 @@ export async function sendMessage(receiverId: string, message: string, token: st
   return res.json();
 }
 
-export async function uploadFile(receiverId: string, file: File, token: string) {
+export async function uploadFile(receiverId: string, file: File, token: string, messageType: "file" | "voice" = "file") {
   const formData = new FormData();
   formData.append("receiverId", receiverId);
   formData.append("file", file);
+  formData.append("messageType", messageType);
 
   const res = await fetch(`${BASE_URL}/chat/upload`, {
     method: "POST",
