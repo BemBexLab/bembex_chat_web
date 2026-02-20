@@ -24,13 +24,24 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
   const [input, setInput] = useState("");
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const voiceInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const scrollToLatest = () => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    };
+
+    requestAnimationFrame(() => {
+      scrollToLatest();
+      requestAnimationFrame(scrollToLatest);
+    });
+  }, [messages, conversation.id]);
 
   const handleSend = () => {
     if (input.trim()) {
@@ -181,7 +192,7 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
       </div>
 
       {/* ── MESSAGES ── */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-0.5">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-0.5">
         {messages.map((msg, idx) => {
           const prev = messages[idx - 1];
           const showYesterdayDivider = idx === 0 && !msg.isNew;

@@ -16,6 +16,7 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
   const [input, setInput] = useState("");
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const voiceInputRef = useRef<HTMLInputElement>(null);
@@ -23,8 +24,18 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
   const voiceChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const scrollToLatest = () => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    };
+
+    requestAnimationFrame(() => {
+      scrollToLatest();
+      requestAnimationFrame(scrollToLatest);
+    });
+  }, [messages, recipientName]);
 
   const handleSend = () => {
     if (input.trim()) {
@@ -156,7 +167,7 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
   return (
     <div className="flex-1 flex flex-col bg-[#161929] min-w-0 overflow-hidden">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 md:px-5 flex flex-col gap-0.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[#2a2e3e]">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 md:px-5 flex flex-col gap-0.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[#2a2e3e]">
         {messages.map((msg, idx) => {
           const prev = messages[idx - 1];
 
