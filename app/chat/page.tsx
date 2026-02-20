@@ -43,6 +43,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
 
   // Mobile state
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   // Suspension state
   const [isSuspended, setIsSuspended] = useState(false);
@@ -412,9 +413,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
 
   // Track active conversation ID with ref to avoid listener recreation
   const activeIdRef = React.useRef<string | null>(null);
+  const mobileChatOpenRef = React.useRef(false);
+  const isMobileViewportRef = React.useRef(false);
   React.useEffect(() => {
     activeIdRef.current = activeId;
   }, [activeId]);
+  React.useEffect(() => {
+    mobileChatOpenRef.current = mobileChatOpen;
+  }, [mobileChatOpen]);
+  React.useEffect(() => {
+    isMobileViewportRef.current = isMobileViewport;
+  }, [isMobileViewport]);
   const playedNotificationMessageIdsRef = React.useRef<Set<string>>(new Set());
   const socketListenerStartedAtRef = React.useRef<number>(0);
 
@@ -427,6 +436,21 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     }
     return "";
   };
+
+  const isConversationActuallyVisible = React.useCallback(
+    (conversationId?: string) => {
+      if (!conversationId) return false;
+      if (activeIdRef.current !== conversationId) return false;
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return false;
+      // On mobile viewport, message is only visible when chat panel is open.
+      if (isMobileViewportRef.current) {
+        return mobileChatOpenRef.current;
+      }
+      // On desktop/tablet split view, active conversation is visible.
+      return true;
+    },
+    []
+  );
 
   const markConversationAsReadAndSync = React.useCallback(
     async (conversationId: string) => {
@@ -626,7 +650,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
 
         // If this open conversation receives an incoming message, mark it read immediately
         // so other sessions/screens (desktop/mobile) sync unread state in real time.
-        if (isIncomingForCurrentUser && data?.conversationId) {
+        if (isIncomingForCurrentUser && data?.conversationId && isConversationActuallyVisible(String(data.conversationId))) {
           markConversationAsReadAndSync(String(data.conversationId));
         }
       }
@@ -718,7 +742,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
       mounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveToken, effectiveUser]);
+  }, [effectiveToken, effectiveUser, isConversationActuallyVisible, markConversationAsReadAndSync]);
 
   // Fallback unread sync across screens/devices:
   // refresh conversations on interval + when tab regains focus/visibility.
@@ -871,8 +895,19 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
 
   useEffect(() => {
     if (!activeId) return;
-    markConversationAsReadAndSync(activeId);
-  }, [activeId, markConversationAsReadAndSync]);
+    if (isConversationActuallyVisible(activeId)) {
+      markConversationAsReadAndSync(activeId);
+    }
+  }, [activeId, mobileChatOpen, isMobileViewport, isConversationActuallyVisible, markConversationAsReadAndSync]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const updateMobileViewport = () => setIsMobileViewport(mediaQuery.matches);
+    updateMobileViewport();
+    mediaQuery.addEventListener("change", updateMobileViewport);
+    return () => mediaQuery.removeEventListener("change", updateMobileViewport);
+  }, []);
 
   // SIMPLE: Join/leave socket rooms when active conversation changes
   useEffect(() => {
