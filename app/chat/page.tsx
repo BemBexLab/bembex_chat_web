@@ -1026,12 +1026,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                 isAdmin={!!adminUser}
               />
 
-              {/* FAB */}
-              <button className="absolute bottom-4 right-4 w-14 h-14 bg-[#4e6ef2] rounded-full flex items-center justify-center shadow-xl shadow-[#4e6ef2]/40 active:scale-95 transition-transform z-10">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-              </button>
             </div>
           </>
         )}
