@@ -8,8 +8,11 @@ interface MessageBubbleProps {
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
-  const [resolvedFileUrl, setResolvedFileUrl] = useState<string | null>(message.fileUrl || null);
+  const [resolvedFileUrl, setResolvedFileUrl] = useState<string | null>(null);
   const [resolvedMimeType, setResolvedMimeType] = useState<string>("");
+  const [isResolvingAttachment, setIsResolvingAttachment] = useState<boolean>(!!message.fileUrl);
+  const [imageLoaded, setImageLoaded] = useState<boolean>(false);
+  const [audioReady, setAudioReady] = useState<boolean>(false);
 
   useEffect(() => {
     let blobUrlToRevoke: string | null = null;
@@ -18,13 +21,22 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
     const resolveProtectedFileUrl = async () => {
       if (!message.fileUrl) {
         setResolvedFileUrl(null);
+        setResolvedMimeType("");
+        setIsResolvingAttachment(false);
+        setImageLoaded(false);
+        setAudioReady(false);
         return;
       }
+
+      setIsResolvingAttachment(true);
+      setImageLoaded(false);
+      setAudioReady(false);
 
       const isMongoFileApi = message.fileUrl.includes("/api/chat/file/");
       if (!isMongoFileApi) {
         setResolvedFileUrl(message.fileUrl);
         setResolvedMimeType((message.fileType || "").toLowerCase());
+        setIsResolvingAttachment(false);
         return;
       }
 
@@ -73,6 +85,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         if (!response.ok) {
           setResolvedFileUrl(message.fileUrl);
           setResolvedMimeType((message.fileType || "").toLowerCase());
+          setIsResolvingAttachment(false);
           return;
         }
 
@@ -81,11 +94,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         if (!cancelled) {
           setResolvedFileUrl(blobUrlToRevoke);
           setResolvedMimeType((blob.type || message.fileType || "").toLowerCase());
+          setIsResolvingAttachment(false);
         }
       } catch {
         if (!cancelled) {
           setResolvedFileUrl(message.fileUrl);
           setResolvedMimeType((message.fileType || "").toLowerCase());
+          setIsResolvingAttachment(false);
         }
       }
     };
@@ -106,6 +121,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
     message.content.startsWith("https://"));
 
   const hasAttachment = !!resolvedFileUrl;
+  const hasOriginalAttachment = !!message.fileUrl;
   const normalizedType = (resolvedMimeType || message.fileType || "").toLowerCase();
   const lowerFileName = (message.fileName || "").toLowerCase();
   const isImage =
@@ -147,14 +163,34 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         )}
 
         {/* Bubble */}
-        {isImage ? (
+        {hasOriginalAttachment && (isResolvingAttachment || !hasAttachment) ? (
+          <div
+            className={`px-3 py-2 rounded-xl flex items-center gap-2 ${
+              message.isSelf
+                ? "bg-[#4e6ef2] text-white rounded-br-sm"
+                : "bg-[#252b40] text-[#ccd4f5] rounded-bl-sm"
+            }`}
+          >
+            <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            <span className="text-[12px]">Loading attachment...</span>
+          </div>
+        ) : isImage ? (
           <div className="rounded-xl overflow-hidden max-w-xs border border-[#2a2e3e] bg-[#1b2032]">
             <a href={resolvedFileUrl || message.fileUrl} target="_blank" rel="noopener noreferrer">
-              <img
-                src={resolvedFileUrl || message.fileUrl}
-                alt={message.fileName || "Image"}
-                className="w-full h-auto max-h-80 object-cover"
-              />
+              <div className="relative">
+                {!imageLoaded && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#161929]/50">
+                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+                <img
+                  src={resolvedFileUrl || message.fileUrl}
+                  alt={message.fileName || "Image"}
+                  className="w-full h-auto max-h-80 object-cover"
+                  onLoad={() => setImageLoaded(true)}
+                  onError={() => setImageLoaded(true)}
+                />
+              </div>
             </a>
             <div className="px-3 py-2 flex items-center justify-between gap-2">
               <span className="text-[11px] text-[#ccd4f5] truncate">
@@ -184,7 +220,21 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                 : "bg-[#252b40] text-[#ccd4f5] rounded-bl-sm"
             }`}
           >
-            <audio controls preload="none" src={resolvedFileUrl || message.fileUrl} className="max-w-[260px] w-full" />
+            {!audioReady && (
+              <div className="flex items-center gap-2 text-[12px]">
+                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <span>Loading voice note...</span>
+              </div>
+            )}
+            <audio
+              controls
+              preload="none"
+              src={resolvedFileUrl || message.fileUrl}
+              className="max-w-[260px] w-full"
+              onCanPlayThrough={() => setAudioReady(true)}
+              onLoadedData={() => setAudioReady(true)}
+              onError={() => setAudioReady(true)}
+            />
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] truncate">{message.fileName || "Voice note"}</span>
               <a
