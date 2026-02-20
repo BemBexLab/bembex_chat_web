@@ -560,27 +560,34 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
         !!data?.fileName ||
         data?.messageType === "file" ||
         data?.messageType === "voice";
-      const eventTimestamp = data?.timestamp ? new Date(data.timestamp).getTime() : Date.now();
+      const eventTimestamp = data?.timestamp ? new Date(data.timestamp).getTime() : NaN;
+      const nowTs = Date.now();
       const isRecentLiveEvent = Number.isFinite(eventTimestamp)
         ? eventTimestamp >= socketListenerStartedAtRef.current - 1500
         : true;
+      const isFreshArrival = Number.isFinite(eventTimestamp)
+        ? nowTs - eventTimestamp <= 5000 && nowTs - eventTimestamp >= -2000
+        : false;
       const isIncomingForCurrentUser =
         !!senderId &&
         !!selfId &&
         senderId !== selfId &&
         (!!effectiveUser?.isAdmin || receiverId === selfId);
 
-      if (hasContent && isRecentLiveEvent && isIncomingForCurrentUser) {
-        if (!incomingMessageId || !playedNotificationMessageIdsRef.current.has(incomingMessageId)) {
-          if (incomingMessageId) {
-            playedNotificationMessageIdsRef.current.add(incomingMessageId);
-          }
-          if (playedNotificationMessageIdsRef.current.size > 500) {
-            const firstKey = playedNotificationMessageIdsRef.current.values().next().value;
-            if (firstKey) playedNotificationMessageIdsRef.current.delete(firstKey);
-          }
-          playNotificationSound();
+      if (
+        hasContent &&
+        isRecentLiveEvent &&
+        isFreshArrival &&
+        isIncomingForCurrentUser &&
+        !!incomingMessageId &&
+        !playedNotificationMessageIdsRef.current.has(incomingMessageId)
+      ) {
+        playedNotificationMessageIdsRef.current.add(incomingMessageId);
+        if (playedNotificationMessageIdsRef.current.size > 500) {
+          const firstKey = playedNotificationMessageIdsRef.current.values().next().value;
+          if (firstKey) playedNotificationMessageIdsRef.current.delete(firstKey);
         }
+        playNotificationSound();
       }
 
       // If admin/user is on a temp conversation and a real message arrives for that participant,
@@ -616,6 +623,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
             },
           ];
         });
+
+        // If this open conversation receives an incoming message, mark it read immediately
+        // so other sessions/screens (desktop/mobile) sync unread state in real time.
+        if (isIncomingForCurrentUser && data?.conversationId) {
+          markConversationAsReadAndSync(String(data.conversationId));
+        }
       }
       // Update conversation list (move to top, update last message, unread, etc.)
       setConversations((prev) => {
