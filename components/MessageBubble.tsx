@@ -9,6 +9,7 @@ interface MessageBubbleProps {
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
   const [resolvedFileUrl, setResolvedFileUrl] = useState<string | null>(message.fileUrl || null);
+  const [resolvedMimeType, setResolvedMimeType] = useState<string>("");
 
   useEffect(() => {
     let blobUrlToRevoke: string | null = null;
@@ -23,10 +24,19 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
       const isMongoFileApi = message.fileUrl.includes("/api/chat/file/");
       if (!isMongoFileApi) {
         setResolvedFileUrl(message.fileUrl);
+        setResolvedMimeType((message.fileType || "").toLowerCase());
         return;
       }
 
       try {
+        // Force same-origin API path so auth cookies/header work after re-login.
+        let requestUrl = message.fileUrl;
+        const marker = "/api/chat/file/";
+        const markerIndex = message.fileUrl.indexOf(marker);
+        if (markerIndex >= 0) {
+          requestUrl = message.fileUrl.substring(markerIndex);
+        }
+
         let token: string | null = null;
         if (typeof window !== "undefined") {
           const adminRaw = localStorage.getItem("admin_auth");
@@ -44,13 +54,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
           headers.Authorization = `Bearer ${token}`;
         }
 
-        const response = await fetch(message.fileUrl, {
+        const response = await fetch(requestUrl, {
           method: "GET",
           headers,
           credentials: "include",
         });
         if (!response.ok) {
           setResolvedFileUrl(message.fileUrl);
+          setResolvedMimeType((message.fileType || "").toLowerCase());
           return;
         }
 
@@ -58,10 +69,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         blobUrlToRevoke = URL.createObjectURL(blob);
         if (!cancelled) {
           setResolvedFileUrl(blobUrlToRevoke);
+          setResolvedMimeType((blob.type || message.fileType || "").toLowerCase());
         }
       } catch {
         if (!cancelled) {
           setResolvedFileUrl(message.fileUrl);
+          setResolvedMimeType((message.fileType || "").toLowerCase());
         }
       }
     };
@@ -82,7 +95,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
     message.content.startsWith("https://"));
 
   const hasAttachment = !!resolvedFileUrl;
-  const normalizedType = (message.fileType || "").toLowerCase();
+  const normalizedType = (resolvedMimeType || message.fileType || "").toLowerCase();
   const lowerFileName = (message.fileName || "").toLowerCase();
   const isImage =
     hasAttachment &&
