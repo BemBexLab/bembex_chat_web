@@ -10,7 +10,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ conversation, onMenuClick }) => {
   return (
-    <div className="h-[52px] bg-[#1d2133] border-b border-[#2a2e3e] flex items-center justify-between px-4 flex-shrink-0 sticky top-0 z-10">
+    <div className="h-[52px] bg-[#1d2133]/95 backdrop-blur-md border-b border-[#2a2e3e] shadow-[0_8px_24px_rgba(0,0,0,0.25)] flex items-center justify-between px-4 flex-shrink-0 sticky top-0 z-30">
       {/* Left: hamburger + avatar + info */}
       <div className="flex items-center gap-2.5">
         {/* Hamburger - mobile only */}
