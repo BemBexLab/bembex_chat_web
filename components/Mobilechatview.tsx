@@ -142,9 +142,9 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
   };
 
   return (
-    <div className="md:hidden flex flex-col h-full bg-[#111827]">
+    <div className="md:hidden flex flex-col h-full bg-[#111827] pt-14 relative overflow-hidden">
       {/* ── MOBILE CHAT HEADER ── */}
-      <div className="h-14 bg-[#1a1f2e]/95 backdrop-blur-md border-b border-[#2a2e3e] shadow-[0_8px_24px_rgba(0,0,0,0.28)] flex items-center gap-2 px-2 flex-shrink-0 sticky top-0 z-30">
+      <div className="h-14 bg-[#1a1f2e]/95 backdrop-blur-md border-b border-[#2a2e3e] shadow-[0_8px_24px_rgba(0,0,0,0.28)] flex items-center gap-2 px-2 flex-shrink-0 fixed top-0 left-0 right-0 z-[120]">
         {/* Back */}
         <button
           onClick={onBack}

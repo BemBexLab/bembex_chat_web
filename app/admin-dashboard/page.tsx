@@ -27,7 +27,6 @@ const AdminDashboard: React.FC = () => {
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const playedNotificationMessageIdsRef = useRef<Set<string>>(new Set());
   const audioUnlockedRef = useRef(false);
-  const pendingNotificationRef = useRef(false);
   const lastNotificationAtRef = useRef(0);
   const router = typeof window !== "undefined" ? require("next/navigation").useRouter() : null;
 
@@ -99,15 +98,6 @@ const AdminDashboard: React.FC = () => {
           audio.pause();
           audio.currentTime = 0;
           audioUnlockedRef.current = true;
-          if (pendingNotificationRef.current) {
-            pendingNotificationRef.current = false;
-            setTimeout(() => {
-              const retryAudio = notificationAudioRef.current;
-              if (!retryAudio) return;
-              retryAudio.currentTime = 0;
-              retryAudio.play().catch(() => {});
-            }, 0);
-          }
         })
         .catch(() => {});
     };
@@ -148,9 +138,7 @@ const AdminDashboard: React.FC = () => {
         if (now - lastNotificationAtRef.current < 100) return;
         lastNotificationAtRef.current = now;
         notificationAudioRef.current.currentTime = 0;
-        notificationAudioRef.current.play().catch(() => {
-          pendingNotificationRef.current = true;
-        });
+        notificationAudioRef.current.play().catch(() => {});
       }
     };
 

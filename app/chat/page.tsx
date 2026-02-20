@@ -59,7 +59,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
   // Notification sound
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioUnlockedRef = useRef(false);
-  const pendingNotificationRef = useRef(false);
   const lastNotificationAtRef = useRef(0);
 
   // Initialize audio element and disable browser notifications
@@ -91,15 +90,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
             audio.pause();
             audio.currentTime = 0;
             audioUnlockedRef.current = true;
-            if (pendingNotificationRef.current) {
-              pendingNotificationRef.current = false;
-              setTimeout(() => {
-                const retryAudio = notificationAudioRef.current;
-                if (!retryAudio) return;
-                retryAudio.currentTime = 0;
-                retryAudio.play().catch(() => {});
-              }, 0);
-            }
           })
           .catch(() => {});
       };
@@ -127,7 +117,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
       notificationAudioRef.current.currentTime = 0; // Restart from beginning
       notificationAudioRef.current.play().catch((err) => {
         console.error("[ChatPage] ❌ Failed to play notification sound:", err);
-        pendingNotificationRef.current = true;
       });
     } else {
       console.warn("[ChatPage] ⚠️ Audio element is not initialized");
