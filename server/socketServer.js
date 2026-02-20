@@ -23,6 +23,15 @@ function broadcastMessage(data) {
   }
 }
 
+function broadcastConversationRead(data) {
+  if (!io || !data?.conversationId || !data?.readerId) return;
+  io.to(String(data.readerId)).emit("conversation_read", {
+    conversationId: String(data.conversationId),
+    readerId: String(data.readerId),
+    timestamp: data.timestamp || new Date().toISOString(),
+  });
+}
+
 function setupSocket(server) {
   if (!io) {
     io = new Server(server, {
@@ -52,6 +61,10 @@ function setupSocket(server) {
 
       socket.on("new_message", (data) => {
         broadcastMessage(data);
+      });
+
+      socket.on("conversation_read", (data) => {
+        broadcastConversationRead(data);
       });
     });
   }

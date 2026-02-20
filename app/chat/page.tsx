@@ -305,9 +305,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     );
     setActiveId(id);
     setSidebarOpen(false);
-    if (effectiveToken && !String(id).startsWith("temp_")) {
-      markAsRead(id, effectiveToken).catch(() => {});
-    }
   };
 
   // Logout handler for regular users (used by Sidebar)
@@ -336,9 +333,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     );
     setActiveId(id);
     setMobileChatOpen(true);
-    if (effectiveToken && !String(id).startsWith("temp_")) {
-      markAsRead(id, effectiveToken).catch(() => {});
-    }
   };
 
   const handleSelectUserFromSearch = (userId: string, userName: string) => {
@@ -434,6 +428,27 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     return "";
   };
 
+  const markConversationAsReadAndSync = React.useCallback(
+    async (conversationId: string) => {
+      if (!effectiveToken || !conversationId || String(conversationId).startsWith("temp_")) return;
+      setConversations((prev) =>
+        prev.map((conv) => (conv.id === conversationId ? { ...conv, unread: 0 } : conv))
+      );
+      try {
+        await markAsRead(conversationId, effectiveToken);
+      } catch {
+        return;
+      }
+      const socket = getSocket();
+      socket?.emit("conversation_read", {
+        conversationId,
+        readerId: normalizeId(effectiveUser?.id),
+        timestamp: new Date().toISOString(),
+      });
+    },
+    [effectiveToken, effectiveUser]
+  );
+
   // Helper to check online status robustly (handles different id shapes)
   const isIdOnline = (id: any) => {
     if (!id) return false;
@@ -449,6 +464,33 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     }
     return false;
   };
+
+  const syncConversationsFromServer = React.useCallback(async () => {
+    if (!effectiveToken) return;
+    try {
+      const data = await fetchConversations(effectiveToken);
+      const serverList: Conversation[] = (data.conversations || []).map((c: any) => ({
+        id: c.id,
+        name: c.otherUserName,
+        otherUserId: c.otherUserId,
+        unread: c.unreadCount,
+        lastMessage: c.lastMessage,
+        lastMessageTime: c.lastMessageTime,
+        online: isIdOnline(c.otherUserId),
+      }));
+
+      setConversations((prev) => {
+        // Preserve client-only temp conversations while syncing real unread counts from backend.
+        const tempConversations = prev.filter((c) => String(c.id).startsWith("temp_"));
+        if (!tempConversations.length) return serverList;
+        const existingIds = new Set(serverList.map((c) => c.id));
+        const preservedTemps = tempConversations.filter((c) => !existingIds.has(c.id));
+        return [...preservedTemps, ...serverList];
+      });
+    } catch {
+      // Keep current local state on transient sync failures.
+    }
+  }, [effectiveToken, onlineUsers]);
 
   // Real-time: Setup socket.io connection ONCE when user logs in
   useEffect(() => {
@@ -630,9 +672,21 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
       });
     };
 
+    const handleConversationRead = (data: any) => {
+      const selfId = normalizeId(effectiveUser?.id);
+      const readerId = normalizeId(data?.readerId);
+      const conversationId = String(data?.conversationId || "");
+      if (!conversationId || !selfId || readerId !== selfId) return;
+      setConversations((prev) =>
+        prev.map((conv) => (conv.id === conversationId ? { ...conv, unread: 0 } : conv))
+      );
+    };
+
     socket.off("new_message"); // Remove old listener if any
     console.log("[ChatPage] 🎧 Setting up new_message listener");
     socket.on("new_message", handleNewMessage);
+    socket.off("conversation_read");
+    socket.on("conversation_read", handleConversationRead);
     console.log("[ChatPage] ✅ new_message listener registered");
 
     // Re-attach listener on reconnection
@@ -646,11 +700,50 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     return () => {
       console.log("[ChatPage] 🎧 Removing new_message listener");
       socket.off("new_message", handleNewMessage);
+      socket.off("conversation_read", handleConversationRead);
       socket.off("reconnect", handleReconnect);
       mounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveToken, effectiveUser]);
+
+  // Fallback unread sync across screens/devices:
+  // refresh conversations on interval + when tab regains focus/visibility.
+  useEffect(() => {
+    if (!effectiveToken || !effectiveUser) return;
+
+    const onFocus = () => {
+      syncConversationsFromServer();
+    };
+    const onVisibility = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        syncConversationsFromServer();
+      }
+    };
+
+    const interval = setInterval(() => {
+      if (typeof document === "undefined" || document.visibilityState === "visible") {
+        syncConversationsFromServer();
+      }
+    }, 2500);
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", onFocus);
+    }
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibility);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("focus", onFocus);
+      }
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibility);
+      }
+    };
+  }, [effectiveToken, effectiveUser, syncConversationsFromServer]);
 
   // Fetch messages for active conversation (only once when conversation changes)
   useEffect(() => {
@@ -724,10 +817,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                 };
               });
               setMessages(msgs);
-              setConversations((prev) =>
-                prev.map((conv) => (conv.id === activeId ? { ...conv, unread: 0 } : conv))
-              );
-              markAsRead(activeId, effectiveToken).catch(() => {});
+              markConversationAsReadAndSync(activeId);
             })
             .catch((e) => {
               console.error(e);
@@ -759,15 +849,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
           };
         });
         setMessages(msgs);
-        setConversations((prev) =>
-          prev.map((conv) => (conv.id === activeId ? { ...conv, unread: 0 } : conv))
-        );
-        markAsRead(activeId, effectiveToken).catch(() => {});
+        markConversationAsReadAndSync(activeId);
       })
       .catch((e) => {
         console.error(e);
       });
-  }, [activeId, effectiveToken, effectiveUser]);
+  }, [activeId, effectiveToken, effectiveUser, markConversationAsReadAndSync]);
+
+  useEffect(() => {
+    if (!activeId) return;
+    markConversationAsReadAndSync(activeId);
+  }, [activeId, markConversationAsReadAndSync]);
 
   // SIMPLE: Join/leave socket rooms when active conversation changes
   useEffect(() => {
