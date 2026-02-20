@@ -214,7 +214,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
           </div>
         ) : isVoice ? (
           <div
-            className={`px-3 py-2 rounded-xl flex flex-col gap-2 ${
+            className={`px-3 py-2 rounded-xl flex flex-col gap-2 min-w-[280px] md:min-w-[340px] ${
               message.isSelf
                 ? "bg-[#4e6ef2] text-white rounded-br-sm"
                 : "bg-[#252b40] text-[#ccd4f5] rounded-bl-sm"
@@ -230,7 +230,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
               controls
               preload="none"
               src={resolvedFileUrl || message.fileUrl}
-              className="max-w-[260px] w-full"
+              className="max-w-[380px] w-full"
               onCanPlayThrough={() => setAudioReady(true)}
               onLoadedData={() => setAudioReady(true)}
               onError={() => setAudioReady(true)}
