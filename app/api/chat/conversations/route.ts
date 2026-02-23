@@ -37,8 +37,6 @@ async function handler(req: AuthenticatedRequest) {
       );
     }
 
-    console.log('[API /chat/conversations] User:', userId, 'Token type:', req.user?.type);
-
     const pipeline = [
       {
         $match: {
@@ -108,11 +106,6 @@ async function handler(req: AuthenticatedRequest) {
 
     const conversations = await Chat.aggregate(pipeline as any);
 
-    console.log('[API /chat/conversations] Retrieved', conversations.length, 'conversations');
-    if (conversations.length > 0) {
-      console.log('[API /chat/conversations] First conv:', JSON.stringify(conversations[0], null, 2));
-    }
-
     const formattedConversations = conversations.map((conv: any) => ({
       id: conv._id,
       otherUserId: conv.otherUserId,
@@ -121,8 +114,6 @@ async function handler(req: AuthenticatedRequest) {
       lastMessageTime: conv.lastMessageTime,
       unreadCount: conv.unread,
     }));
-
-    console.log('[API /chat/conversations] Formatted response:', JSON.stringify(formattedConversations, null, 2));
 
     return NextResponse.json(
       {

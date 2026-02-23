@@ -334,6 +334,75 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     );
     setActiveId(id);
     setMobileChatOpen(true);
+
+    // Mobile reliability: fetch messages immediately on tap so chat wall always loads.
+    if (!effectiveToken || !effectiveUser) return;
+    if (String(id).startsWith("temp_")) {
+      setMessages([]);
+      return;
+    }
+
+    if (effectiveUser.isAdmin && String(id).includes("-")) {
+      const parts = String(id).split("-");
+      if (parts.length === 2) {
+        const adminIsParticipant = parts.includes(String(effectiveUser.id));
+        const fetchPromise = adminIsParticipant
+          ? fetchConversation(id, effectiveToken).then((res) => ({ messages: res.messages || [] }))
+          : getMemberConversation(parts[0], parts[1], effectiveToken);
+        fetchPromise
+          .then((data: any) => {
+            const msgs: Message[] = (data.messages || []).map((m: any) => {
+              let displayFileType: "image" | "file" | "voice" | undefined;
+              if (m.messageType === "file" && m.fileType) {
+                displayFileType = m.fileType.startsWith("image/") ? "image" : "file";
+              }
+              if (m.messageType === "voice" || (m.fileType && String(m.fileType).startsWith("audio/"))) {
+                displayFileType = "voice";
+              }
+              return {
+                id: m.id || m._id,
+                sender: m.senderName,
+                content: m.content || m.message,
+                time: new Date(m.timestamp || m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                isSelf: m.senderId === effectiveUser.id,
+                fileUrl: m.fileUrl,
+                fileName: m.fileName,
+                fileType: displayFileType,
+                messageType: m.messageType,
+              };
+            });
+            setMessages(msgs);
+          })
+          .catch(() => {});
+      }
+      return;
+    }
+
+    fetchConversation(id, effectiveToken)
+      .then((data) => {
+        const msgs: Message[] = (data.messages || []).map((m: any) => {
+          let displayFileType: "image" | "file" | "voice" | undefined;
+          if (m.messageType === "file" && m.fileType) {
+            displayFileType = m.fileType.startsWith("image/") ? "image" : "file";
+          }
+          if (m.messageType === "voice" || (m.fileType && String(m.fileType).startsWith("audio/"))) {
+            displayFileType = "voice";
+          }
+          return {
+            id: m.id || m._id,
+            sender: m.senderName,
+            content: m.content || m.message,
+            time: new Date(m.timestamp || m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            isSelf: m.senderId === effectiveUser.id,
+            fileUrl: m.fileUrl,
+            fileName: m.fileName,
+            fileType: displayFileType,
+            messageType: m.messageType,
+          };
+        });
+        setMessages(msgs);
+      })
+      .catch(() => {});
   };
 
   const handleSelectUserFromSearch = (userId: string, userName: string) => {
@@ -567,11 +636,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
       const isForOpenConversation =
         data.conversationId === currentActiveId || isForTempActiveConversation;
 
-      console.log("[ChatPage] 📨 Received new_message event:", {
+      console.log("[ChatPage] Message sync working normally", {
         conversationId: data.conversationId,
         activeConversation: currentActiveId,
-        fromUser: data.senderName,
-        message: data.message?.substring(0, 50)
       });
 
       // Play notification for every incoming message from other users/admins, regardless of active chat.
@@ -584,28 +651,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
         !!data?.fileName ||
         data?.messageType === "file" ||
         data?.messageType === "voice";
-      const eventTimestamp = data?.timestamp ? new Date(data.timestamp).getTime() : NaN;
-      const nowTs = Date.now();
-      const isRecentLiveEvent = Number.isFinite(eventTimestamp)
-        ? eventTimestamp >= socketListenerStartedAtRef.current - 1500
-        : true;
-      const isFreshArrival = Number.isFinite(eventTimestamp)
-        ? nowTs - eventTimestamp <= 5000 && nowTs - eventTimestamp >= -2000
-        : false;
       const isIncomingForCurrentUser =
         !!senderId &&
         !!selfId &&
         senderId !== selfId &&
         (!!effectiveUser?.isAdmin || receiverId === selfId);
 
-      if (
-        hasContent &&
-        isRecentLiveEvent &&
-        isFreshArrival &&
-        isIncomingForCurrentUser &&
-        !!incomingMessageId &&
-        !playedNotificationMessageIdsRef.current.has(incomingMessageId)
-      ) {
+      if (hasContent && isIncomingForCurrentUser && !!incomingMessageId && !playedNotificationMessageIdsRef.current.has(incomingMessageId)) {
         playedNotificationMessageIdsRef.current.add(incomingMessageId);
         if (playedNotificationMessageIdsRef.current.size > 500) {
           const firstKey = playedNotificationMessageIdsRef.current.values().next().value;
@@ -624,14 +676,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
       // If the message is for the active conversation, update messages (prevent duplicates)
       if (isForOpenConversation) {
         console.log("[ChatPage] ✅ Message is for active conversation, adding to list");
+        let appended = false;
         setMessages((prev) => {
           // Check if message already exists by ID (most reliable)
-          const existsById = prev.some((msg) => msg.id === data.id);
+          const existsById = data?.id ? prev.some((msg) => msg.id === data.id) : false;
           if (existsById) {
             console.log("[ChatPage] ⚠️ Message already exists by ID:", data.id);
             return prev;
           }
-          
+          appended = true;
           return [
             ...prev,
             {
@@ -652,6 +705,52 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
         // so other sessions/screens (desktop/mobile) sync unread state in real time.
         if (isIncomingForCurrentUser && data?.conversationId && isConversationActuallyVisible(String(data.conversationId))) {
           markConversationAsReadAndSync(String(data.conversationId));
+        }
+
+        // Mobile reliability: if message append was skipped or delayed due race, force a refresh
+        // of the currently open chat wall to ensure latest incoming message is visible.
+        if (isMobileViewportRef.current && mobileChatOpenRef.current && data?.conversationId) {
+          const activeConversationId = String(data.conversationId);
+          const performRefresh = !appended;
+          if (performRefresh && effectiveToken) {
+            const parts = activeConversationId.split("-");
+            const adminIsParticipant =
+              !!effectiveUser?.isAdmin &&
+              parts.length === 2 &&
+              parts.includes(String(effectiveUser.id));
+            const refreshPromise =
+              adminIsParticipant || !effectiveUser?.isAdmin
+                ? fetchConversation(activeConversationId, effectiveToken).then((res) => ({ messages: res.messages || [] }))
+                : parts.length === 2
+                  ? getMemberConversation(parts[0], parts[1], effectiveToken)
+                  : Promise.resolve({ messages: [] });
+
+            refreshPromise
+              .then((res: any) => {
+                const msgs: Message[] = (res.messages || []).map((m: any) => {
+                  let displayFileType: "image" | "file" | "voice" | undefined;
+                  if (m.messageType === "file" && m.fileType) {
+                    displayFileType = String(m.fileType).startsWith("image/") ? "image" : "file";
+                  }
+                  if (m.messageType === "voice" || (m.fileType && String(m.fileType).startsWith("audio/"))) {
+                    displayFileType = "voice";
+                  }
+                  return {
+                    id: m.id || m._id,
+                    sender: m.senderName,
+                    content: m.content || m.message,
+                    time: new Date(m.timestamp || m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                    isSelf: String(m.senderId) === String(effectiveUser.id),
+                    fileUrl: m.fileUrl,
+                    fileName: m.fileName,
+                    fileType: displayFileType,
+                    messageType: m.messageType,
+                  };
+                });
+                setMessages(msgs);
+              })
+              .catch(() => {});
+          }
         }
       }
       // Update conversation list (move to top, update last message, unread, etc.)
@@ -785,6 +884,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
   // Fetch messages for active conversation (only once when conversation changes)
   useEffect(() => {
     if (!effectiveToken || !activeId || !effectiveUser) return;
+      // On mobile viewport, only fetch conversation messages when chat panel is actually open.
+      if (isMobileViewport && !mobileChatOpen) return;
       if (activeId.startsWith('temp_')) {
         // For admins with temp conversations, try to fetch existing chats between admin and selected user
         if (effectiveUser.isAdmin) {
@@ -831,8 +932,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
         // conversationId format is user1-user2
         const parts = String(activeId).split('-');
         if (parts.length === 2) {
-          getMemberConversation(parts[0], parts[1], effectiveToken)
-            .then((data) => {
+          const adminIsParticipant = parts.includes(String(effectiveUser.id));
+          const fetchPromise = adminIsParticipant
+            ? fetchConversation(activeId, effectiveToken).then((res) => ({ messages: res.messages || [] }))
+            : getMemberConversation(parts[0], parts[1], effectiveToken);
+          fetchPromise
+            .then((data: any) => {
               const msgs: Message[] = (data.messages || []).map((m: any) => {
                 let displayFileType: 'image' | 'file' | 'voice' | undefined;
                 if (m.messageType === 'file' && m.fileType) {
@@ -854,7 +959,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                 };
               });
               setMessages(msgs);
-              markConversationAsReadAndSync(activeId);
+              if (isConversationActuallyVisible(activeId)) {
+                markConversationAsReadAndSync(activeId);
+              }
             })
             .catch((e) => {
               console.error(e);
@@ -886,12 +993,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
           };
         });
         setMessages(msgs);
-        markConversationAsReadAndSync(activeId);
+        if (isConversationActuallyVisible(activeId)) {
+          markConversationAsReadAndSync(activeId);
+        }
       })
       .catch((e) => {
         console.error(e);
       });
-  }, [activeId, effectiveToken, effectiveUser, markConversationAsReadAndSync]);
+  }, [activeId, effectiveToken, effectiveUser, markConversationAsReadAndSync, isMobileViewport, mobileChatOpen]);
 
   useEffect(() => {
     if (!activeId) return;

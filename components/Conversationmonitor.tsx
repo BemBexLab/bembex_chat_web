@@ -94,9 +94,8 @@ const ConversationMonitor: React.FC = () => {
         setConversationError("No authentication token found");
         return;
       }
-      console.log("Fetching conversations between:", user1, "and", user2);
       const response = await getMemberConversation(user1, user2, token);
-      console.log("Response received:", response);
+      console.log("[ConversationMonitor] Messages loaded successfully");
       // Keep chronological order: oldest at top, newest at bottom.
       setMessages(response.messages || []);
       if (!response.messages || response.messages.length === 0) {

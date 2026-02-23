@@ -235,14 +235,11 @@ export async function getUser(token: string, userId: string) {
 
 export async function getMemberConversation(userId1: string, userId2: string, token: string) {
   const url = `${BASE_URL}/admin/chats?user1=${userId1}&user2=${userId2}`;
-  console.log("Fetching from URL:", url);
   
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
     credentials: "include",
   });
-  
-  console.log("Response status:", res.status);
   
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -250,7 +247,7 @@ export async function getMemberConversation(userId1: string, userId2: string, to
   }
   
   const data = await res.json();
-  console.log("Raw data from backend:", data);
+  console.log("[API] Conversation fetch completed");
   
   // Normalize to { messages: ConversationMessage[] }
   return {

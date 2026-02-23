@@ -187,17 +187,11 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
           <div className="w-9 h-9 rounded-full bg-[#2a3152] text-[#aab3d4] text-[12px] font-bold flex items-center justify-center">
             {conversation.name.slice(0, 2).toUpperCase()}
           </div>
-          {conversation.online && (
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#3ecf8e] border-2 border-[#1a1f2e]" />
-          )}
         </div>
 
         <div className="flex flex-col flex-1 min-w-0">
           <span className="text-[14px] font-semibold text-[#e4e9f7] truncate leading-tight">
             {conversation.name}
-          </span>
-          <span className={`text-[11px] leading-tight ${conversation.online ? "text-[#3ecf8e]" : "text-[#555e7a]"}`}>
-            {conversation.online ? "Available" : "Offline"}
           </span>
         </div>
 
