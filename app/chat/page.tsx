@@ -629,12 +629,21 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
       const currentActiveId = activeIdRef.current;
       const isTempActive = !!currentActiveId && currentActiveId.startsWith("temp_");
       const tempTargetUserId = isTempActive ? currentActiveId.slice("temp_".length) : null;
+      const senderIdNormalized = normalizeId(data?.senderId);
+      const receiverIdNormalized = normalizeId(data?.receiverId);
+      const activeConversationParts = String(currentActiveId || "").split("-");
+      const matchesActiveByParticipants =
+        activeConversationParts.length === 2 &&
+        !!senderIdNormalized &&
+        !!receiverIdNormalized &&
+        activeConversationParts.includes(senderIdNormalized) &&
+        activeConversationParts.includes(receiverIdNormalized);
       const isForTempActiveConversation =
         !!tempTargetUserId &&
-        (String(data.senderId) === String(tempTargetUserId) ||
-          String(data.receiverId) === String(tempTargetUserId));
+        (senderIdNormalized === String(tempTargetUserId) ||
+          receiverIdNormalized === String(tempTargetUserId));
       const isForOpenConversation =
-        data.conversationId === currentActiveId || isForTempActiveConversation;
+        data.conversationId === currentActiveId || isForTempActiveConversation || matchesActiveByParticipants;
 
       console.log("[ChatPage] Message sync working normally", {
         conversationId: data.conversationId,
@@ -642,8 +651,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
       });
 
       // Play notification for every incoming message from other users/admins, regardless of active chat.
-      const senderId = normalizeId(data?.senderId);
-      const receiverId = normalizeId(data?.receiverId);
+      const senderId = senderIdNormalized;
+      const receiverId = receiverIdNormalized;
       const selfId = normalizeId(effectiveUser?.id);
       const hasContent =
         typeof data?.message === "string" ||
@@ -695,7 +704,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
         let appended = false;
         setMessages((prev) => {
           // Check if message already exists by ID (most reliable)
-          const existsById = data?.id ? prev.some((msg) => msg.id === data.id) : false;
+          const effectiveMessageId =
+            data?.id
+              ? String(data.id)
+              : `${data?.conversationId || currentActiveId || "conversation"}-${senderIdNormalized || "sender"}-${data?.timestamp || Date.now()}`;
+          const existsById = prev.some((msg) => msg.id === effectiveMessageId);
           if (existsById) {
             console.log("[ChatPage] ⚠️ Message already exists by ID:", data.id);
             return prev;
@@ -704,11 +717,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
           return [
             ...prev,
             {
-              id: data.id,
+              id:
+                data?.id
+                  ? String(data.id)
+                  : `${data?.conversationId || currentActiveId || "conversation"}-${senderIdNormalized || "sender"}-${data?.timestamp || Date.now()}`,
               sender: data.senderName,
               content: data.message,
-              time: new Date(data.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              isSelf: data.senderId === effectiveUser.id,
+              time: new Date(data.timestamp || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              isSelf: senderIdNormalized === String(effectiveUser.id),
               fileUrl: data.fileUrl,
               fileName: data.fileName,
               fileType: resolveAttachmentType(data.messageType, data.fileType),
