@@ -1050,7 +1050,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                     messageType: m.messageType,
                   };
                 });
-                setMessages(msgs);
+                setMessages(applyNewMessageDividerFlags(activeId, msgs));
               })
               .catch(() => {
                 // No chats yet between admin and user
