@@ -231,7 +231,7 @@ const UserLogin: React.FC<UserLoginProps> = ({ onLogin }) => {
         </p> */}
 
         <p className="text-center text-[11px] text-[#555e7a] mt-6">
-          © 2024 BEMBEX. All rights reserved.
+          © 2026 BEMBEX. All rights reserved.
         </p>
       </div>
 
