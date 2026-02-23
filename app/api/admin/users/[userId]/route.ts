@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '../../../middleware/auth';
 import { connectDB } from '../../../utils/database';
 import User from '../../../models/User';
+import Chat from '../../../models/Chat';
 
 const formatUserForFrontend = (user: any) => ({
   id: user._id,
@@ -109,17 +110,25 @@ async function handler(
     }
 
     if (req.method === 'DELETE') {
-      const user = await User.findByIdAndDelete(userId);
-
-      if (!user) {
+      const existingUser = await User.findById(userId).select('_id');
+      if (!existingUser) {
         return NextResponse.json(
           { message: 'User not found' },
           { status: 404 }
         );
       }
 
+      const deletedChats = await Chat.deleteMany({
+        $or: [{ senderId: userId }, { receiverId: userId }],
+      });
+
+      const user = await User.findByIdAndDelete(userId);
+
       return NextResponse.json(
-        { message: 'User deleted successfully' },
+        {
+          message: 'User deleted successfully',
+          deletedChatsCount: deletedChats.deletedCount || 0,
+        },
         { status: 200 }
       );
     }

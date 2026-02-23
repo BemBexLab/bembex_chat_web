@@ -196,8 +196,8 @@ const UsersManagement: React.FC = () => {
     }
   };
 
-  const handleForceLogout = async (userId: string) => {
-    if (!confirm('Force logout this user? They will be disconnected and need to log in again.')) return;
+  const handleDeleteChats = async (userId: string) => {
+    if (!confirm('Delete all chats for this user? This cannot be undone.')) return;
 
     setLoading(true);
     setError(null);
@@ -209,17 +209,18 @@ const UsersManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`${apiBase}/admin/users/${userId}/force-logout`, {
+      const response = await fetch(`${apiBase}/admin/users/${userId}/delete-chats`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || errorData.message || 'Failed to force logout');
+        throw new Error(errorData.error || errorData.message || 'Failed to delete chats');
       }
 
-      alert('User has been forcefully logged out');
+      const result = await response.json();
+      alert(`Deleted ${result.deletedChatsCount ?? 0} chat messages for this user`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -308,7 +309,7 @@ const UsersManagement: React.FC = () => {
                 <th className="text-left px-6 py-3.5 text-[12px] font-bold text-[#8891aa] uppercase tracking-wider">Email</th>
                 <th className="text-left px-6 py-3.5 text-[12px] font-bold text-[#8891aa] uppercase tracking-wider">Status</th>
                 <th className="text-left px-6 py-3.5 text-[12px] font-bold text-[#8891aa] uppercase tracking-wider">Created</th>
-                <th className="text-left px-6 py-3.5 text-[12px] font-bold text-[#8891aa] uppercase tracking-wider">Force Logout</th>
+                <th className="text-left px-6 py-3.5 text-[12px] font-bold text-[#8891aa] uppercase tracking-wider">Delete Chats</th>
                 <th className="text-right px-6 py-3.5 text-[12px] font-bold text-[#8891aa] uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -340,12 +341,12 @@ const UsersManagement: React.FC = () => {
                   <td className="px-6 py-4 text-[13px] text-[#8891aa]">{user.createdAt}</td>
                   <td className="px-6 py-4">
                     <button
-                      onClick={() => handleForceLogout(user.id)}
+                      onClick={() => handleDeleteChats(user.id)}
                       disabled={loading}
                       className="px-3 py-1 rounded-full text-[12px] font-bold uppercase tracking-wide bg-[#ffb86b]/10 text-[#ffb86b] hover:bg-[#ffb86b]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Force Logout"
+                      title="Delete Chats"
                     >
-                      Force Logout
+                      Delete Chats
                     </button>
                   </td>
                   <td className="px-6 py-4">

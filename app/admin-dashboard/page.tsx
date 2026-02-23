@@ -196,6 +196,7 @@ const AdminDashboard: React.FC = () => {
           <AdminTopBar
             onLogout={handleLogout}
             token={adminToken}
+            showSearch={activeView === "chat"}
             onUserSelect={(userId, userName, conversationId) => {
               console.log("[AdminDashboard] User selected from topbar search:", {
                 userId,
@@ -269,10 +270,12 @@ const AdminDashboard: React.FC = () => {
           </button>
         </div>
 
-        {/* Admin TopBar for user search */}
+        {/* Admin TopBar for user search (mobile: hide logout button beside search) */}
         <AdminTopBar
           onLogout={handleLogout}
           token={adminToken}
+          showSearch={activeView === "chat"}
+          showLogout={false}
           onUserSelect={(userId, userName, conversationId) => {
             setSelectedUserId(userId);
             setSelectedUserName(userName);

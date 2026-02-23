@@ -74,7 +74,7 @@ const TopBar: React.FC<TopBarProps> = ({ token, onUserSelect }) => {
     .toUpperCase();
 
   return (
-    <div className="h-11 bg-[#141728] border-b border-[#1f2336] flex items-center px-3 gap-3 flex-shrink-0 sticky top-0 z-20">
+    <div className="h-11 bg-[#141728] border-b border-[#1f2336] flex items-center px-3 gap-3 flex-shrink-0 sticky top-0 z-40">
       {/* Left: Brand */}
       <div className="flex items-center gap-2 w-40 flex-shrink-0">
         <span className="w-6 h-6 bg-[#4e6ef2] rounded-md flex items-center justify-center text-white font-black text-sm">
@@ -111,7 +111,7 @@ const TopBar: React.FC<TopBarProps> = ({ token, onUserSelect }) => {
 
           {/* Dropdown Results */}
           {showDropdown && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1d2133] border border-[#2a2e3e] rounded-lg shadow-lg max-h-64 overflow-y-auto z-50">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1d2133] border border-[#2a2e3e] rounded-lg shadow-lg max-h-64 overflow-y-auto z-[70]">
               {loadingUsers ? (
                 <div className="px-4 py-3 text-center text-[#8891aa] text-[12px]">
                   Loading users...

@@ -405,80 +405,149 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
       .catch(() => {});
   };
 
-  const handleSelectUserFromSearch = (userId: string, userName: string) => {
-    // Check if conversation already exists with this user
-    const existingConv = conversations.find((c) => c.otherUserId === userId);
+  const handleSelectUserFromSearch = async (userId: string, userName: string) => {
+    const selectedUserId = normalizeId(userId);
+    if (!selectedUserId) return;
+
+    // 1) Try local list first (fast path)
+    let existingConv = conversations.find((c) => normalizeId(c.otherUserId) === selectedUserId);
+
+    // 2) If not found locally, verify against backend (mobile can have stale/partial local list)
+    if (!existingConv && effectiveToken) {
+      try {
+        const convData = await fetchConversations(effectiveToken);
+        const list: Conversation[] = (convData.conversations || []).map((c: any) => ({
+          id: c.id || c._id,
+          name: c.otherUserName,
+          otherUserId: c.otherUserId,
+          unread: c.unreadCount,
+          lastMessage: c.lastMessage,
+          lastMessageTime: c.lastMessageTime,
+          online: isIdOnline(c.otherUserId),
+        }));
+        setConversations(list);
+        existingConv = list.find((c) => normalizeId(c.otherUserId) === selectedUserId);
+      } catch {
+        // Ignore fetch failures and fall back to temp conversation creation.
+      }
+    }
+
     if (existingConv) {
-      // If exists, just set it as active
+      // Continue prior chat
       setActiveId(existingConv.id);
+      setConversations((prev) =>
+        prev.map((conv) => (conv.id === existingConv!.id ? { ...conv, unread: 0 } : conv))
+      );
+      if (effectiveToken && !String(existingConv.id).startsWith("temp_")) {
+        markAsRead(existingConv.id, effectiveToken).catch(() => {});
+      }
     } else {
-      // If doesn't exist, create a temporary conversation entry
-      const tempConversationId = `temp_${userId}`;
+      // No prior chat -> start new chat
+      const tempConversationId = `temp_${selectedUserId}`;
       const newConv: Conversation = {
         id: tempConversationId,
         name: userName,
-        otherUserId: userId,
+        otherUserId: selectedUserId,
         unread: 0,
-        online: isIdOnline(userId),
+        online: isIdOnline(selectedUserId),
       };
-      // Add to conversations list and set as active
-      setConversations((prev) => [newConv, ...prev]);
+      setConversations((prev) => {
+        const exists = prev.some((c) => c.id === tempConversationId);
+        return exists ? prev : [newConv, ...prev];
+      });
       setActiveId(tempConversationId);
+    }
+
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+      setMobileChatOpen(true);
     }
   };
 
   // Track if admin just selected a NEW user (no prior conversation)
   const newUserModeRef = React.useRef<string | null>(null); // Will contain userId if new user selected
-
-  // Handle admin selected user - continues existing chats if available
-  // This effect ONLY runs when the admin selection changes, not when conversations fetch
+  // Handle admin selected user - resolve existing conversation first, else create new.
   useEffect(() => {
-    if (adminSelectedUserId && adminSelectedUserName) {
-      console.log("[ChatPage] 🔵 Admin selected user:", { 
-        adminSelectedUserId, 
-        adminSelectedUserName, 
-        hasConversationId: !!adminSelectedConversationId,
-        adminSelectedConversationId 
-      });
-      
-      // If a specific conversation ID was provided, use it directly
+    let cancelled = false;
+
+    const resolveAdminSelection = async () => {
+      if (!adminSelectedUserId || !adminSelectedUserName) return;
+      const selectedUserId = normalizeId(adminSelectedUserId);
+      if (!selectedUserId) return;
+
+      // If a specific conversation ID was provided, use it directly.
       if (adminSelectedConversationId) {
-        console.log("[ChatPage] ✅ Using provided EXISTING conversation ID:", adminSelectedConversationId);
-        newUserModeRef.current = null; // Not a new user
+        newUserModeRef.current = null;
         setActiveId(adminSelectedConversationId);
+        if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+          setMobileChatOpen(true);
+        }
         return;
       }
-      
-      // No conversation ID provided = NEW USER (no prior chats)
-      console.log("[ChatPage] ✅ NEW USER SELECTED - creating temp conversation");
-      const tempConversationId = `temp_${adminSelectedUserId}`;
-      newUserModeRef.current = adminSelectedUserId; // Mark as new user mode
-      
-      const newConv: Conversation = {
-        id: tempConversationId,
-        name: adminSelectedUserName,
-        otherUserId: adminSelectedUserId,
-        unread: 0,
-        online: false,
-      };
-      
-      // Add temp conversation to the list
-      setConversations((prev) => {
-        const exists = prev.some((c) => c.id === tempConversationId);
-        if (exists) {
-          console.log("[ChatPage] Temp conversation already exists in list");
-          return prev;
+
+      // No conversation ID provided: check existing local list first.
+      let existingConv = conversations.find((c) => normalizeId(c.otherUserId) === selectedUserId);
+
+      // If not in local list, verify against backend for stale/mobile state.
+      if (!existingConv && effectiveToken) {
+        try {
+          const convData = await fetchConversations(effectiveToken);
+          const list: Conversation[] = (convData.conversations || []).map((c: any) => ({
+            id: c.id || c._id,
+            name: c.otherUserName,
+            otherUserId: c.otherUserId,
+            unread: c.unreadCount,
+            lastMessage: c.lastMessage,
+            lastMessageTime: c.lastMessageTime,
+            online: isIdOnline(c.otherUserId),
+          }));
+          if (!cancelled) {
+            setConversations(list);
+          }
+          existingConv = list.find((c) => normalizeId(c.otherUserId) === selectedUserId);
+        } catch {
+          // Ignore fetch failures and fall back to temp conversation creation.
         }
-        console.log("[ChatPage] Adding temp conversation to list at top");
-        return [newConv, ...prev];
-      });
-      
-      setActiveId(tempConversationId);
-      console.log("[ChatPage] ✅ Switched to temp conversation:", tempConversationId);
-    }
-    // IMPORTANT: Only depend on admin selection props, NOT on conversations or onlineUsers
-    // This prevents re-running when data fetches update those arrays
-  }, [adminSelectedUserId, adminSelectedUserName, adminSelectedConversationId]);
+      }
+
+      if (existingConv) {
+        if (cancelled) return;
+        newUserModeRef.current = null;
+        setActiveId(existingConv.id);
+        setConversations((prev) =>
+          prev.map((conv) => (conv.id === existingConv!.id ? { ...conv, unread: 0 } : conv))
+        );
+        if (effectiveToken && !String(existingConv.id).startsWith("temp_")) {
+          markAsRead(existingConv.id, effectiveToken).catch(() => {});
+        }
+      } else {
+        if (cancelled) return;
+        const tempConversationId = `temp_${selectedUserId}`;
+        newUserModeRef.current = selectedUserId;
+        const newConv: Conversation = {
+          id: tempConversationId,
+          name: adminSelectedUserName,
+          otherUserId: selectedUserId,
+          unread: 0,
+          online: isIdOnline(selectedUserId),
+        };
+        setConversations((prev) => {
+          const exists = prev.some((c) => c.id === tempConversationId);
+          return exists ? prev : [newConv, ...prev];
+        });
+        setActiveId(tempConversationId);
+      }
+
+      if (!cancelled && typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+        setMobileChatOpen(true);
+      }
+    };
+
+    resolveAdminSelection();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [adminSelectedUserId, adminSelectedUserName, adminSelectedConversationId, effectiveToken]);
 
   // Track active conversation ID with ref to avoid listener recreation
   const activeIdRef = React.useRef<string | null>(null);
@@ -1198,14 +1267,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
           />
         ) : (
           <>
-            {/* Top bar */}
-            <MobileTopBar
-              title="Chats"
-              token={effectiveToken}
-              onUserSelect={handleSelectUserFromSearch}
-              onLogout={handleMobileLogout}
-              showSearch={true}
-            />
+            {/* Top bar (hidden for admins on mobile) */}
+            {!effectiveUser?.isAdmin && (
+              <MobileTopBar
+                title="Chats"
+                token={effectiveToken}
+                onUserSelect={handleSelectUserFromSearch}
+                onLogout={handleMobileLogout}
+                showSearch={true}
+              />
+            )}
 
             {/* Tab content */}
             <div className="flex-1 flex flex-col overflow-hidden relative">
@@ -1225,4 +1296,5 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
 };
 
 export default ChatPage;
+
 

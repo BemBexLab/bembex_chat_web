@@ -28,13 +28,13 @@ const Header: React.FC<HeaderProps> = ({ conversation, onMenuClick }) => {
 
         {/* Avatar */}
         <div className="w-[34px] h-[34px] rounded-lg bg-[#4e6ef2] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">
-          {conversation?.name?.slice(0, 2).toUpperCase() ?? "AR"}
+          {conversation?.name?.slice(0, 2).toUpperCase() ?? "N/A"}
         </div>
 
         {/* Name + status */}
         <div className="flex flex-col">
           <span className="text-[13.5px] font-semibold text-[#e4e9f7] leading-tight">
-            {conversation?.name ?? "Abdul Rehman"}
+            {conversation?.name ?? "Select a conversation"}
           </span>
         </div>
       </div>
