@@ -376,7 +376,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                 messageType: m.messageType,
               };
             });
-            setMessages(applyNewMessageDividerFlags(id, msgs));
+            commitFetchedMessages(id, msgs);
           })
           .catch(() => {});
       }
@@ -405,7 +405,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
             messageType: m.messageType,
           };
         });
-        setMessages(applyNewMessageDividerFlags(id, msgs));
+        commitFetchedMessages(id, msgs);
       })
       .catch(() => {});
   };
@@ -658,6 +658,19 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     []
   );
 
+  const commitFetchedMessages = React.useCallback(
+    (conversationId: string, fetchedMessages: Message[]) => {
+      const withCurrentUnreadFlags = applyNewMessageDividerFlags(conversationId, fetchedMessages);
+      setMessages((prev) => {
+        const prevNewMessageIds = new Set(prev.filter((m) => m.isNew).map((m) => m.id));
+        return withCurrentUnreadFlags.map((msg) =>
+          prevNewMessageIds.has(msg.id) ? { ...msg, isNew: true } : msg
+        );
+      });
+    },
+    [applyNewMessageDividerFlags]
+  );
+
   const syncConversationsFromServer = React.useCallback(async () => {
     if (!effectiveToken) return;
     try {
@@ -883,7 +896,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                     messageType: m.messageType,
                   };
                 });
-                setMessages(applyNewMessageDividerFlags(String(currentActiveId || data?.conversationId || ""), msgs));
+                commitFetchedMessages(String(currentActiveId || data?.conversationId || ""), msgs);
               })
               .catch(() => {});
           }
@@ -1050,7 +1063,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                     messageType: m.messageType,
                   };
                 });
-                setMessages(applyNewMessageDividerFlags(activeId, msgs));
+                commitFetchedMessages(activeId, msgs);
               })
               .catch(() => {
                 // No chats yet between admin and user
@@ -1095,7 +1108,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                   messageType: m.messageType,
                 };
               });
-              setMessages(applyNewMessageDividerFlags(activeId, msgs));
+              commitFetchedMessages(activeId, msgs);
               if (isConversationActuallyVisible(activeId)) {
                 markConversationAsReadAndSync(activeId);
               }
@@ -1129,7 +1142,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
             messageType: m.messageType,
           };
         });
-        setMessages(applyNewMessageDividerFlags(activeId, msgs));
+        commitFetchedMessages(activeId, msgs);
         if (isConversationActuallyVisible(activeId)) {
           markConversationAsReadAndSync(activeId);
         }
@@ -1137,7 +1150,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
       .catch((e) => {
         console.error(e);
       });
-  }, [activeId, effectiveToken, effectiveUser, markConversationAsReadAndSync, isMobileViewport, mobileChatOpen, applyNewMessageDividerFlags]);
+  }, [activeId, effectiveToken, effectiveUser, markConversationAsReadAndSync, isMobileViewport, mobileChatOpen, commitFetchedMessages]);
 
   useEffect(() => {
     if (!activeId) return;
