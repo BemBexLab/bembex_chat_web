@@ -657,7 +657,23 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
         senderId !== selfId &&
         (!!effectiveUser?.isAdmin || receiverId === selfId);
 
-      if (hasContent && isIncomingForCurrentUser && !!incomingMessageId && !playedNotificationMessageIdsRef.current.has(incomingMessageId)) {
+      const eventTimestamp = data?.timestamp ? new Date(data.timestamp).getTime() : NaN;
+      const nowTs = Date.now();
+      const isRecentLiveEvent = Number.isFinite(eventTimestamp)
+        ? eventTimestamp >= socketListenerStartedAtRef.current - 1500
+        : false;
+      const isFreshArrival = Number.isFinite(eventTimestamp)
+        ? nowTs - eventTimestamp <= 15000 && nowTs - eventTimestamp >= -2000
+        : false;
+
+      if (
+        hasContent &&
+        isIncomingForCurrentUser &&
+        !!incomingMessageId &&
+        !playedNotificationMessageIdsRef.current.has(incomingMessageId) &&
+        isRecentLiveEvent &&
+        isFreshArrival
+      ) {
         playedNotificationMessageIdsRef.current.add(incomingMessageId);
         if (playedNotificationMessageIdsRef.current.size > 500) {
           const firstKey = playedNotificationMessageIdsRef.current.values().next().value;
@@ -828,6 +844,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     // Re-attach listener on reconnection
     const handleReconnect = () => {
       console.log("[ChatPage] 🔄 Socket reconnected, re-attaching message listener");
+      socketListenerStartedAtRef.current = Date.now();
       socket.off("new_message");
       socket.on("new_message", handleNewMessage);
     };
