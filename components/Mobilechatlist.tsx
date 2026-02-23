@@ -18,7 +18,7 @@ const MobileChatList: React.FC<MobileChatListProps> = ({
   isAdmin = false,
 }) => {
   return (
-    <div className="flex-1 overflow-y-auto bg-[#111827]">
+    <div className="chat-scrollbar flex-1 overflow-y-auto bg-[#111827]">
       {conversations.map((conv, idx) => {
         const isActive = conv.id === activeId;
         const metaText = conv.lastMessage || "";

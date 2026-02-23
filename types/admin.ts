@@ -2,6 +2,7 @@ export interface AdminUser {
   id: string;
   username: string;
   email: string;
+  password?: string;
   status: "active" | "suspended";
   createdAt: string;
   lastLogin?: string;

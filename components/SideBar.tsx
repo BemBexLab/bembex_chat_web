@@ -13,7 +13,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ conversations, activeId, onSelect, isAdmin = false, onLogout }) => {
   return (
-    <div className="w-[220px] min-w-[220px] bg-[#1d2133] border-r border-[#2a2e3e] flex flex-col h-full overflow-y-auto">
+    <div className="chat-scrollbar w-[220px] min-w-[220px] bg-[#1d2133] border-r border-[#2a2e3e] flex flex-col h-full overflow-y-auto">
       {/* Workspace header */}
       <div className="px-3.5 py-3 border-b border-[#2a2e3e] flex-shrink-0">
         <span className="text-[13px] font-bold text-[#ccd4f5] tracking-[0.3px]">

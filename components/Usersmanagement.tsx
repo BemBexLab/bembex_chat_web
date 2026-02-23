@@ -77,17 +77,23 @@ const UsersManagement: React.FC = () => {
     try {
       if (editingUser) {
         // Edit existing user
+        const formData = userData as Record<string, any>;
+        const updatePayload: Record<string, any> = {
+          username: userData.username,
+          email: userData.email,
+          status: userData.status,
+        };
+        if (typeof formData.password === "string" && formData.password.trim().length > 0) {
+          updatePayload.password = formData.password.trim();
+        }
+
         const response = await fetch(`${apiBase}/admin/users/${editingUser.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            username: userData.username,
-            email: userData.email,
-            status: userData.status,
-          }),
+          body: JSON.stringify(updatePayload),
         });
 
         if (!response.ok) {

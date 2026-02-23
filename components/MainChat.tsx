@@ -167,7 +167,7 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
   return (
     <div className="flex-1 flex flex-col bg-[#161929] min-w-0 overflow-hidden">
       {/* Messages area */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 md:px-5 flex flex-col gap-0.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[#2a2e3e]">
+      <div ref={messagesContainerRef} className="chat-scrollbar flex-1 overflow-y-auto px-4 py-4 md:px-5 flex flex-col gap-0.5">
         {messages.map((msg, idx) => {
           const prev = messages[idx - 1];
 
@@ -227,18 +227,18 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
         {/* Toolbar */}
         <div className="flex gap-0.5 mb-1.5">
           {[
-            {
-              label: "Emoji",
-              icon: (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                  <line x1="9" y1="9" x2="9.01" y2="9" />
-                  <line x1="15" y1="9" x2="15.01" y2="9" />
-                </svg>
-              ),
-              onClick: () => {},
-            },
+            // {
+            //   label: "Emoji",
+            //   icon: (
+            //     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            //       <circle cx="12" cy="12" r="10" />
+            //       <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+            //       <line x1="9" y1="9" x2="9.01" y2="9" />
+            //       <line x1="15" y1="9" x2="15.01" y2="9" />
+            //     </svg>
+            //   ),
+            //   onClick: () => {},
+            // },
             {
               label: "Attach",
               icon: (

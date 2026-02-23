@@ -54,7 +54,7 @@ async function handler(
     }
 
     if (req.method === 'PUT') {
-      const { username, phone, email, status } = await req.json();
+      const { username, phone, email, status, password } = await req.json();
 
       const user = await User.findById(userId);
 
@@ -76,6 +76,15 @@ async function handler(
           );
         }
         user.email = email;
+      }
+      if (typeof password === 'string' && password.trim().length > 0) {
+        if (password.trim().length < 6) {
+          return NextResponse.json(
+            { message: 'Password must be at least 6 characters' },
+            { status: 400 }
+          );
+        }
+        user.password = password.trim();
       }
 
       // Handle status change (active/suspended)

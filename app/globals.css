@@ -24,3 +24,28 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Custom chat scrollbar: thin + blue, consistent across browsers */
+.chat-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 #111827;
+}
+
+.chat-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: #111827;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #4e6ef2, #3b82f6);
+  border-radius: 9999px;
+  border: 1px solid #1f2937;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5a78f4, #4e6ef2);
+}
