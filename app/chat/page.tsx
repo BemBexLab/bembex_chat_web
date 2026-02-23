@@ -57,6 +57,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioUnlockedRef = useRef(false);
   const lastNotificationAtRef = useRef(0);
+  const pendingUnreadOnOpenRef = useRef<{ conversationId: string; count: number } | null>(null);
 
   // Initialize audio element and disable browser notifications
   useEffect(() => {
@@ -301,6 +302,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
   };
 
   const handleDesktopSelectConv = (id: string) => {
+    const openedUnread = Number(conversations.find((conv) => conv.id === id)?.unread || 0);
+    pendingUnreadOnOpenRef.current = { conversationId: id, count: Math.max(0, openedUnread) };
     setConversations((prev) =>
       prev.map((conv) => (conv.id === id ? { ...conv, unread: 0 } : conv))
     );
@@ -329,6 +332,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
   };
 
   const handleMobileSelectConv = (id: string) => {
+    const openedUnread = Number(conversations.find((conv) => conv.id === id)?.unread || 0);
+    pendingUnreadOnOpenRef.current = { conversationId: id, count: Math.max(0, openedUnread) };
     setConversations((prev) =>
       prev.map((conv) => (conv.id === id ? { ...conv, unread: 0 } : conv))
     );
@@ -371,7 +376,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                 messageType: m.messageType,
               };
             });
-            setMessages(msgs);
+            setMessages(applyNewMessageDividerFlags(id, msgs));
           })
           .catch(() => {});
       }
@@ -400,7 +405,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
             messageType: m.messageType,
           };
         });
-        setMessages(msgs);
+        setMessages(applyNewMessageDividerFlags(id, msgs));
       })
       .catch(() => {});
   };
@@ -434,6 +439,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
 
     if (existingConv) {
       // Continue prior chat
+      const openedUnread = Number(existingConv.unread || 0);
+      pendingUnreadOnOpenRef.current = { conversationId: existingConv.id, count: Math.max(0, openedUnread) };
       setActiveId(existingConv.id);
       setConversations((prev) =>
         prev.map((conv) => (conv.id === existingConv!.id ? { ...conv, unread: 0 } : conv))
@@ -511,6 +518,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
 
       if (existingConv) {
         if (cancelled) return;
+        const openedUnread = Number(existingConv.unread || 0);
+        pendingUnreadOnOpenRef.current = { conversationId: existingConv.id, count: Math.max(0, openedUnread) };
         newUserModeRef.current = null;
         setActiveId(existingConv.id);
         setConversations((prev) =>
@@ -627,6 +636,28 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
     return false;
   };
 
+  const applyNewMessageDividerFlags = React.useCallback(
+    (conversationId: string, fetchedMessages: Message[]) => {
+      const pending = pendingUnreadOnOpenRef.current;
+      if (!pending || pending.conversationId !== conversationId || pending.count <= 0) {
+        return fetchedMessages;
+      }
+
+      let remaining = pending.count;
+      const messagesWithFlags = [...fetchedMessages];
+      for (let i = messagesWithFlags.length - 1; i >= 0 && remaining > 0; i--) {
+        if (!messagesWithFlags[i].isSelf) {
+          messagesWithFlags[i] = { ...messagesWithFlags[i], isNew: true };
+          remaining -= 1;
+        }
+      }
+
+      pendingUnreadOnOpenRef.current = null;
+      return messagesWithFlags;
+    },
+    []
+  );
+
   const syncConversationsFromServer = React.useCallback(async () => {
     if (!effectiveToken) return;
     try {
@@ -684,6 +715,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
         // Only set to first conversation if no active conversation yet AND not in new user mode
         if (list.length > 0 && !activeId && !newUserModeRef.current) {
           console.log("[ChatPage] Setting activeId to first conversation:", list[0].id);
+          pendingUnreadOnOpenRef.current = {
+            conversationId: list[0].id,
+            count: Math.max(0, Number(list[0].unread || 0)),
+          };
           setActiveId(list[0].id);
         }
       })
@@ -848,7 +883,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                     messageType: m.messageType,
                   };
                 });
-                setMessages(msgs);
+                setMessages(applyNewMessageDividerFlags(String(currentActiveId || data?.conversationId || ""), msgs));
               })
               .catch(() => {});
           }
@@ -1060,7 +1095,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
                   messageType: m.messageType,
                 };
               });
-              setMessages(msgs);
+              setMessages(applyNewMessageDividerFlags(activeId, msgs));
               if (isConversationActuallyVisible(activeId)) {
                 markConversationAsReadAndSync(activeId);
               }
@@ -1094,7 +1129,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
             messageType: m.messageType,
           };
         });
-        setMessages(msgs);
+        setMessages(applyNewMessageDividerFlags(activeId, msgs));
         if (isConversationActuallyVisible(activeId)) {
           markConversationAsReadAndSync(activeId);
         }
@@ -1102,7 +1137,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ hideTopBar = false, adminSelectedUs
       .catch((e) => {
         console.error(e);
       });
-  }, [activeId, effectiveToken, effectiveUser, markConversationAsReadAndSync, isMobileViewport, mobileChatOpen]);
+  }, [activeId, effectiveToken, effectiveUser, markConversationAsReadAndSync, isMobileViewport, mobileChatOpen, applyNewMessageDividerFlags]);
 
   useEffect(() => {
     if (!activeId) return;

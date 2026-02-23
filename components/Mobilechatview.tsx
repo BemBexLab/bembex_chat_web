@@ -278,13 +278,14 @@ const MobileChatView: React.FC<MobileChatViewProps> = ({
           <div className={`flex-1 flex items-center bg-[#252b40] border border-[#2a2e3e] rounded-2xl px-3.5 transition-colors ${
             isSuspended ? "opacity-60" : "focus-within:border-[#4e6ef2]"
           }`}>
-            <input
+            <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={isSuspended ? "Account suspended" : "Message..."}
               disabled={isSuspended}
-              className="flex-1 bg-transparent border-none outline-none text-[#ccd4f5] text-[14px] py-2.5 font-[inherit] placeholder-[#555e7a] disabled:cursor-not-allowed"
+              rows={1}
+              className="flex-1 bg-transparent border-none outline-none text-[#ccd4f5] text-[14px] py-2.5 font-[inherit] placeholder-[#555e7a] disabled:cursor-not-allowed resize-none max-h-28"
             />
             {/* Image */}
             <button

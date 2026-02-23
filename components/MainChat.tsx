@@ -321,16 +321,17 @@ const MainChat: React.FC<MainChatProps> = ({ messages, recipientName, onSend, on
         />
 
         {/* Input row */}
-        <div className={`flex items-center gap-2 bg-[#252b40] border border-[#2a2e3e] rounded-xl px-3.5 transition-colors ${
+        <div className={`flex items-end gap-2 bg-[#252b40] border border-[#2a2e3e] rounded-xl px-3.5 transition-colors ${
           isSuspended ? "opacity-60" : "focus-within:border-[#4e6ef2]"
         }`}>
-          <input
+          <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isSuspended ? "Account suspended" : `Message to ${recipientName}`}
             disabled={isSuspended}
-            className="flex-1 bg-transparent border-none outline-none text-[#ccd4f5] text-[13px] py-2.5 font-[inherit] placeholder-[#555e7a] disabled:cursor-not-allowed"
+            rows={1}
+            className="flex-1 bg-transparent border-none outline-none text-[#ccd4f5] text-[13px] py-2.5 font-[inherit] placeholder-[#555e7a] disabled:cursor-not-allowed resize-none max-h-28"
           />
           <button
             onClick={handleSend}
