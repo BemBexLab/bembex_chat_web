@@ -146,7 +146,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
 
         {/* Footer */}
         <p className="text-center text-[12px] text-[#555e7a] mt-6">
-          © 2024 BEMBEX. All rights reserved.
+          © 2026 BEMBEX. All rights reserved.
         </p>
       </div>
     </div>
