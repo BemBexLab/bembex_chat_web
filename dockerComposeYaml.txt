@@ -1,0 +1,15 @@
+services:
+  web:
+    build: .
+    image: bembex-chat-web:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGODB_URI=mongodb+srv://car5p3:car5p3@cluster0.zght3f8.mongodb.net/auth_db?appName=Cluster0
+      - JWT_SECRET=your_super_secret_jwt_key_change_this_in_production_12345
+      - JWT_EXPIRE=7d
+      - SESSION_SECRET=your_super_secret_session_key_change_this_in_production_secret123
+      - ADMIN_EMAIL=admin@example.com
+      - ADMIN_PASSWORD=admin12345

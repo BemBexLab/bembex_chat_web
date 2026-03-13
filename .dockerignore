@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.gitignore
+dev.log
+server.log
+chat-app-priv-ui----2.zip
+npm-debug.log
+yarn-error.log
+README.md
+*.md

@@ -16,7 +16,7 @@ const UsersManagement: React.FC = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
 
   const getToken = () => {
     const auth = typeof window !== "undefined" ? localStorage.getItem("admin_auth") : null;
