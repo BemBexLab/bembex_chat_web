@@ -1,0 +1,10 @@
+.next
+node_modules
+npm-debug.log
+.DS_Store
+dist
+build
+.env
+.vscode
+.git
+.gitignore
